@@ -201,6 +201,27 @@ func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP
 
 	// ---x1 - xl
 
+	xelements := make([]*BN254.ECP, l) // make a slice for x1 to xl
+
+	for i := 1; i < l+1; i++ {
+		if string(id[i-1]) == "0" { // TODO - perhaps make this more elegant and turn ID into slice instead of string? Then we wouldnt have to convert from string byte (string behaves like slice here) to string to compare both
+			xelements[i-1] = BN254.G1mul(helements[i*2], r)
+			fmt.Println(" x ", i, " : ", xelements[i-1].ToString(), " ")
+		} else if string(id[i-1]) == "1" {
+			xelements[i-1] = BN254.G1mul(helements[i*2-1], r)
+			fmt.Println(" x ", i, " : ", xelements[i-1].ToString(), " ")
+		} else {
+			fmt.Println("ID could not be read")
+		}
+	}
+
+	// -- y0
+
+	y0 := BN254.G1mul(kelements[0], r)
+	fmt.Println(y0)
+
+	// -- y1...y2l
+
 }
 
 func main() {
