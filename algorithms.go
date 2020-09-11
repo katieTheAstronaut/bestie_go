@@ -31,9 +31,13 @@ func initRNG() *core.RAND {
 	return rng
 }
 
+// ----------- (Global) Parameters
+// TODO - do we want global parameters?
+var l = 3 // ID bit Length
+
 // Setup takes l -
 // TODO: what about lambda? Does it make sense in this implementation via curve?
-func setup(l int) (p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, helements, kelements []*BN254.ECP, omega *BN254.FP12) {
+func setup(l int, rng *core.RAND) (p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, helements, kelements []*BN254.ECP, omega *BN254.FP12, mk *BN254.ECP, alpha *BN254.BIG) {
 	// ----------- Setup 1
 	// 1. Generate bilinear groups of order p
 	// - already done once you chose the curve
@@ -48,11 +52,8 @@ func setup(l int) (p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, helements, kelem
 	g2 = BN254.ECP2_generator()
 
 	// ----------- Setup 3
-	// 3. Select random exponent alpha in Zp
-	// TODO - move seed stuff up to beginning of main, to make sure we only seed it once
-	rng := initRNG() // Initialise Random number generator
-
-	alpha := BN254.Randomnum(q, rng) // select random number
+	// 3. Select random exponent alpha in Zp --> q needs to be modulus though!
+	alpha = BN254.Randomnum(q, rng)
 
 	// ----------- Setup 4
 	// 4. Select random group elements
@@ -77,7 +78,7 @@ func setup(l int) (p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, helements, kelem
 	// 5. Return secret master key MK = g1^alpha
 	// note: In BESTIE, the groups in the pairings are written as multiplicative groups. However, g1^alpha really represents a multiplikation of g1 * alpha
 
-	// mk := BN254.G1mul(g1, alpha)
+	mk = BN254.G1mul(g1, alpha)
 	// TODO - work with different packages, so that mk can be called by keygen function, needs to be secret
 
 	// ----------- Setup 6
@@ -99,8 +100,6 @@ func setup(l int) (p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, helements, kelem
 	// fmt.Println("Omegatest: ", omegatest.ToString(), "")
 	// fmt.Println(omega.Equals(omegatest))
 
-	return p, g1, g2, helements, kelements, omega
-
 	// ----------- Print Stuff / Test
 	// fmt.Println("\n\n")
 	// fmt.Println("-------  SETUP  ---------")
@@ -117,21 +116,21 @@ func setup(l int) (p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, helements, kelem
 
 	// fmt.Println("Master Key (secret): ", mk, " - is this a point in G1? - ", BN254.G1member(mk), " ")
 
-	// for i := 0; i < 2*l+1; i++ {
-	// 	value2 := hrands[i].ToString()
-	// 	if i == 0 {
-	// 		fmt.Printf("h_%d = %s\n", i, value2)
-	// 		fmt.Println(helements[i])
-	// 	} else if i%2 == 0 {
-	// 		fmt.Printf("h_%d,%d = %s\n", i/2, 1, value2)
-	// 		fmt.Println(helements[i])
-	// 	} else {
-	// 		fmt.Printf("h_%d,%d = %s\n", (i+1)/2, 0, value2)
-	// 		fmt.Println(helements[i])
-	// 	}
-	// 	val := BN254.G1member(helements[1])
-	// 	fmt.Println("Is Point member of G1? ", val, " ")
-	// }
+	for i := 0; i < 2*l+1; i++ {
+		value2 := hrands[i].ToString()
+		if i == 0 {
+			fmt.Printf("h_%d = %s\n", i, value2)
+			fmt.Println(helements[i])
+		} else if i%2 == 0 {
+			fmt.Printf("h_%d,%d = %s\n", i/2, 1, value2)
+			fmt.Println(helements[i])
+		} else {
+			fmt.Printf("h_%d,%d = %s\n", (i+1)/2, 0, value2)
+			fmt.Println(helements[i])
+		}
+		// val := BN254.G1member(helements[1])
+		// fmt.Println("Is Point member of G1? ", val, " ")
+	}
 
 	// for i := 0; i < 2*l+1; i++ {
 	// 	value2 := krands[i].ToString()
@@ -148,29 +147,84 @@ func setup(l int) (p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, helements, kelem
 	// 	val := BN254.G1member(kelements[1])
 	// 	fmt.Println("Is Point member of G1? ", val, " ")
 	// }
+	return p, g1, g2, helements, kelements, omega, mk, alpha
 }
 
-func keyGen() {
+// KeyGen takes user's ID, master key, and public parameters
+func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, helements, kelements []*BN254.ECP, omega *BN254.FP12, rng *core.RAND, alpha *BN254.BIG) {
+	q := BN254.NewBIGints(BN254.CURVE_Order) // TODO - do not repeat yourself, consider putting this in main? but it needs to be secret
+
+	// ----------- KeyGen 1
+	// 1. Select two random exponents alpha_omega and r in Zp
+	alphaOmega := BN254.Randomnum(q, rng)
+	r := BN254.Randomnum(q, rng)
+
+	// ----------- KeyGen 2
+	// Create private key SK_ID
+
+	// ---x0
+	exp := alpha.Minus(alphaOmega)
+	hID := BN254.NewECP()
+
+	// while BESTIE construction theoretically notes to multiply points, in EC this means we need to add all the points of h (point addition)
+	// TODO - this is ridiculously ugly, rewrite this code!
+	for i := 1; i < l+1; i++ {
+		if string(id[i-1]) == "0" { // TODO - perhaps make this more elegant and turn ID into slice instead of string? Then we wouldnt have to convert from string byte (string behaves like slice here) to string to compare both
+			hID.Add(helements[i*2-1])
+			fmt.Println(" ID ", i, " : ", helements[i*2-1], " ")
+		} else if string(id[i-1]) == "1" {
+			hID.Add(helements[i*2])
+			fmt.Println(" ID ", i, " : ", helements[i*2], " ")
+		} else {
+			fmt.Println("ID could not be read")
+		}
+
+	}
+	hID.Add(helements[0])
+	hExp := BN254.G1mul(hID, r)
+	g1AlphaOmega := BN254.G1mul(g1, exp)
+	hExp.Add(g1AlphaOmega)
+
+	x0 := hExp
+	fmt.Println("x0 is the point: ", x0.ToString(), "")
+	fmt.Println(id)
+
+	// Test if adding the points for ID 010 will give the same resulting point --> it will
+	// x0Test := helements[1]
+	// x0Test.Add(helements[4])
+	// x0Test.Add(helements[5])
+	// x0Test.Add(helements[0])
+	// hExpTest := BN254.G1mul(x0Test, r)
+	// hExpTest.Add(g1AlphaOmega)
+
+	// fmt.Println("x0Test is the point: ", hExpTest.ToString(), "")
+
+	// ---x1 - xl
 
 }
 
 func main() {
 
-	// ----------- (Global) Parameters
-	l := 4 // ID bit Length
+	// Initialise Random number generator
+	rng := initRNG()
 
 	// Call Setup to get public parameters
-	p, g1, g2, helements, kelements, omega := setup(l)
+	// pass rng as parameter, so we only need to initialise it once in main
+	p, g1, g2, helements, kelements, omega, mk, alpha := setup(l, rng)
 
 	// Call KeyGen to generate private key
 	// TODO - try this for several users later
-	keyGen()
+	// TODO - link id to l
+	id := "010" // User's ID
 
-	fmt.Println("p: ", p, "")
-	fmt.Println("g1: ", g1, "")
-	fmt.Println("g2: ", g2, "")
-	fmt.Println("helements: ", helements, "")
-	fmt.Println("kelements: ", kelements, "")
-	fmt.Println("omega: ", omega, "")
+	// TODO - get mk and alpha from setup (through other func/package?)
+	keyGen(id, mk, p, g1, g2, helements, kelements, omega, rng, alpha)
+
+	// fmt.Println("p: ", p, "")
+	// fmt.Println("g1: ", g1, "")
+	// fmt.Println("g2: ", g2, "")
+	// fmt.Println("helements: ", helements, "")
+	// fmt.Println("kelements: ", kelements, "")
+	// fmt.Println("omega: ", omega, "")
 
 }
