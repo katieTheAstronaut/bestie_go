@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math/big"
 	"math/rand"
 	"time"
 
@@ -276,8 +275,8 @@ func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP
 	return x0, y0, xelements, yEven, yOdd, z
 }
 
-// Encrypt
-func encrypt() {
+// Encrypt takes subset (covered list CL and revoked list RL), public key parameters, and message m
+func encrypt(cl, rl string, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, h0, k0 *BN254.ECP, helements0, helements1, kelements0, kelements1 []*BN254.ECP, omega *BN254.FP12, message *BN254.FP12) {
 
 }
 
@@ -285,8 +284,6 @@ func main() {
 
 	// measure time of algorithms
 	init := time.Now()
-	r := new(big.Int)
-	fmt.Println(r.Binomial(1000, 10))
 
 	// Initialise Random number generator
 	rng := initRNG()
@@ -304,7 +301,24 @@ func main() {
 	// TODO - get mk and alpha from setup (through other func/package?)
 	x0, y0, xelements, yEven, yOdd, z := keyGen(id, mk, p, g1, g2, h0, k0, helements0, helements1, kelements0, kelements1, omega, rng, alpha)
 
+	// Create message M in GT
+	q := BN254.NewBIGints(BN254.CURVE_Order)
+	// TODO - remove q, as it needs to stay secret?
+	// TODO - this is wrong!!!, but for now we will use a random GT element as message
+	rand1 := BN254.Randomnum(q, rng)
+	m1 := BN254.G1mul(g1, rand1)
+	rand2 := BN254.Randomnum(q, rng)
+	m2 := BN254.G2mul(g2, rand2)
+	message := BN254.Ate(m2, m1)
+	message = BN254.Fexp(message)
+	val := BN254.GTmember(message)
+	fmt.Println("randGT is GT member: ", val)
+
+	// CL
+	cl := "**1*"
+	rl := "*011"
 	// Call Encrypt
+	encrypt(cl, rl, p, g1, g2, h0, k0, helements0, helements1, kelements0, kelements1, omega, message)
 
 	fmt.Println(x0, y0, xelements, yEven, yOdd, z)
 
