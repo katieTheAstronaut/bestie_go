@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/big"
 	"math/rand"
 	"time"
 
@@ -226,6 +227,11 @@ func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP
 
 func main() {
 
+	// measure time of algorithms
+	init := time.Now()
+	r := new(big.Int)
+	fmt.Println(r.Binomial(1000, 10))
+
 	// Initialise Random number generator
 	rng := initRNG()
 
@@ -247,5 +253,9 @@ func main() {
 	// fmt.Println("helements: ", helements, "")
 	// fmt.Println("kelements: ", kelements, "")
 	// fmt.Println("omega: ", omega, "")
+
+	// end of stopwatch
+	elapsed := time.Since(init)
+	fmt.Printf("Binomial took %s", elapsed)
 
 }
