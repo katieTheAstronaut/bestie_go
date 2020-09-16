@@ -38,7 +38,7 @@ var l = 3 // ID bit Length
 
 // Setup takes l -
 // TODO: what about lambda? Does it make sense in this implementation via curve?
-func setup(l int, rng *core.RAND) (p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, helements, kelements []*BN254.ECP, omega *BN254.FP12, mk *BN254.ECP, alpha *BN254.BIG) {
+func setup(l int, rng *core.RAND) (p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, h0, k0 *BN254.ECP, helements0, helements1, kelements0, kelements1 []*BN254.ECP, omega *BN254.FP12, mk *BN254.ECP, alpha *BN254.BIG) {
 	// ----------- Setup 1
 	// 1. Generate bilinear groups of order p
 	// - already done once you chose the curve
@@ -58,21 +58,41 @@ func setup(l int, rng *core.RAND) (p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, 
 
 	// ----------- Setup 4
 	// 4. Select random group elements
-	// h0 , h1,0  , h1,1  , ... hl,0 , hl,1 in G1
-	// all in one slice, so to get the right elements, be careful to leave out first one (h0) and do mod 2
-	hrands := make([]*BN254.BIG, 2*l+1)   // slice for random numbers
-	helements = make([]*BN254.ECP, 2*l+1) // Slice for resulting random group elements of G1
-	for i := 0; i < 2*l+1; i++ {
-		hrands[i] = BN254.Randomnum(q, rng)
-		helements[i] = BN254.G1mul(g1, hrands[i])
+	// h0 is single variable,
+	// h1,0 ... hl,0 and h1,1 ... hl,1 are two separate slices (even and odd) to make this more readable!
+	h0Rand := BN254.Randomnum(q, rng)
+	h0 = BN254.G1mul(g1, h0Rand)
+
+	hrands0 := make([]*BN254.BIG, l)   // slice for random numbers h1,0 ... hl,0
+	helements0 = make([]*BN254.ECP, l) // Slice for resulting random group elements of G1
+	for i := 0; i < l; i++ {
+		hrands0[i] = BN254.Randomnum(q, rng)
+		helements0[i] = BN254.G1mul(g1, hrands0[i])
+	}
+
+	hrands1 := make([]*BN254.BIG, l)   // slice for random numbers h1,1 ... hl,1
+	helements1 = make([]*BN254.ECP, l) // Slice for resulting random group elements of G1
+	for i := 0; i < l; i++ {
+		hrands1[i] = BN254.Randomnum(q, rng)
+		helements1[i] = BN254.G1mul(g1, hrands1[i])
 	}
 
 	// k0, ... kl,1 in G1
-	krands := make([]*BN254.BIG, 2*l+1)   // slice for random numbers
-	kelements = make([]*BN254.ECP, 2*l+1) // Slice for resulting random group elements of G1
-	for i := 0; i < 2*l+1; i++ {
-		krands[i] = BN254.Randomnum(q, rng)
-		kelements[i] = BN254.G1mul(g1, krands[i])
+	k0Rand := BN254.Randomnum(q, rng)
+	k0 = BN254.G1mul(g1, k0Rand)
+
+	krands0 := make([]*BN254.BIG, l)   // slice for random numbers
+	kelements0 = make([]*BN254.ECP, l) // Slice for resulting random group elements of G1
+	for i := 0; i < l; i++ {
+		krands0[i] = BN254.Randomnum(q, rng)
+		kelements0[i] = BN254.G1mul(g1, krands0[i])
+	}
+
+	krands1 := make([]*BN254.BIG, l)   // slice for random numbers
+	kelements1 = make([]*BN254.ECP, l) // Slice for resulting random group elements of G1
+	for i := 0; i < l; i++ {
+		krands1[i] = BN254.Randomnum(q, rng)
+		kelements1[i] = BN254.G1mul(g1, krands1[i])
 	}
 
 	// ----------- Setup 5
@@ -102,8 +122,8 @@ func setup(l int, rng *core.RAND) (p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, 
 	// fmt.Println(omega.Equals(omegatest))
 
 	// ----------- Print Stuff / Test
-	// fmt.Println("\n\n")
-	// fmt.Println("-------  SETUP  ---------")
+	fmt.Println("\n\n")
+	fmt.Println("-------  SETUP  ---------")
 	// fmt.Println("The Modulus p is: (", p, ")")
 	// fmt.Printf("P:\t%s\n", p.ToString())
 	// fmt.Println(new(big.Int).SetString(p.ToString(), 16))
@@ -117,18 +137,14 @@ func setup(l int, rng *core.RAND) (p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, 
 
 	// fmt.Println("Master Key (secret): ", mk, " - is this a point in G1? - ", BN254.G1member(mk), " ")
 
-	for i := 0; i < 2*l+1; i++ {
-		value2 := hrands[i].ToString()
-		if i == 0 {
-			fmt.Printf("h_%d = %s\n", i, value2)
-			fmt.Println(helements[i])
-		} else if i%2 == 0 {
-			fmt.Printf("h_%d,%d = %s\n", i/2, 1, value2)
-			fmt.Println(helements[i])
-		} else {
-			fmt.Printf("h_%d,%d = %s\n", (i+1)/2, 0, value2)
-			fmt.Println(helements[i])
-		}
+	fmt.Printf("h_0 = %s\n", h0.ToString())
+	fmt.Printf("k_0 = %s\n", k0.ToString())
+	for i := 0; i < l; i++ {
+		fmt.Printf("h_%d,0 = %s\n", i+1, helements0[i].ToString())
+		fmt.Printf("h_%d,1 = %s\n", i+1, helements1[i].ToString())
+		fmt.Printf("k_%d,0 = %s\n", i+1, kelements0[i].ToString())
+		fmt.Printf("k_%d,1 = %s\n", i+1, kelements1[i].ToString())
+
 		// val := BN254.G1member(helements[1])
 		// fmt.Println("Is Point member of G1? ", val, " ")
 	}
@@ -148,11 +164,16 @@ func setup(l int, rng *core.RAND) (p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, 
 	// 	val := BN254.G1member(kelements[1])
 	// 	fmt.Println("Is Point member of G1? ", val, " ")
 	// }
-	return p, g1, g2, helements, kelements, omega, mk, alpha
+	return p, g1, g2, h0, k0, helements0, helements1, kelements0, kelements1, omega, mk, alpha
 }
 
 // KeyGen takes user's ID, master key, and public parameters
-func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, helements, kelements []*BN254.ECP, omega *BN254.FP12, rng *core.RAND, alpha *BN254.BIG) {
+func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, h0, k0 *BN254.ECP, helements0, helements1, kelements0, kelements1 []*BN254.ECP, omega *BN254.FP12, rng *core.RAND, alpha *BN254.BIG) (x0, y0 *BN254.ECP, xelements, yEven, yOdd []*BN254.ECP, z *BN254.ECP2) {
+
+	fmt.Println("\n\n")
+	fmt.Println("-------  KeyGen  ---------")
+	fmt.Println("The ID is: ", id, "")
+
 	q := BN254.NewBIGints(BN254.CURVE_Order) // TODO - do not repeat yourself, consider putting this in main? but it needs to be secret
 
 	// ----------- KeyGen 1
@@ -165,30 +186,30 @@ func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP
 
 	// ---x0
 	exp := alpha.Minus(alphaOmega)
+	g1AlphaMinOmega := BN254.G1mul(g1, exp) // g1^(alpha-alphaOmega)
+
 	hID := BN254.NewECP()
 
 	// while BESTIE construction theoretically notes to multiply points, in EC this means we need to add all the points of h (point addition)
 	// TODO - this is ridiculously ugly, rewrite this code!
-	for i := 1; i < l+1; i++ {
-		if string(id[i-1]) == "0" { // TODO - perhaps make this more elegant and turn ID into slice instead of string? Then we wouldnt have to convert from string byte (string behaves like slice here) to string to compare both
-			hID.Add(helements[i*2-1])
-			fmt.Println(" ID ", i, " : ", helements[i*2-1], " ")
-		} else if string(id[i-1]) == "1" {
-			hID.Add(helements[i*2])
-			fmt.Println(" ID ", i, " : ", helements[i*2], " ")
+	for i := 0; i < l; i++ {
+		if string(id[i]) == "0" {
+			hID.Add(helements0[i])
+			fmt.Println(" h_", i+1, "IDi : ", helements0[i].ToString(), " ")
+		} else if string(id[i]) == "1" {
+			hID.Add(helements1[i])
+			fmt.Println(" h_", i+1, "IDi : ", helements1[i].ToString(), " ")
 		} else {
 			fmt.Println("ID could not be read")
 		}
 
 	}
-	hID.Add(helements[0])
+	hID.Add(h0)
 	hExp := BN254.G1mul(hID, r)
-	g1AlphaOmega := BN254.G1mul(g1, exp)
-	hExp.Add(g1AlphaOmega)
+	hExp.Add(g1AlphaMinOmega)
 
-	x0 := hExp
+	x0 = hExp
 	fmt.Println("x0 is the point: ", x0.ToString(), "")
-	fmt.Println(id)
 
 	// Test if adding the points for ID 010 will give the same resulting point --> it will
 	// x0Test := helements[1]
@@ -196,21 +217,21 @@ func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP
 	// x0Test.Add(helements[5])
 	// x0Test.Add(helements[0])
 	// hExpTest := BN254.G1mul(x0Test, r)
-	// hExpTest.Add(g1AlphaOmega)
+	// hExpTest.Add(g1AlphaMinOmega)
 
 	// fmt.Println("x0Test is the point: ", hExpTest.ToString(), "")
 
 	// ---x1 - xl
 
-	xelements := make([]*BN254.ECP, l) // make a slice for x1 to xl
+	xelements = make([]*BN254.ECP, l) // make a slice for x1 to xl
 
-	for i := 1; i < l+1; i++ {
-		if string(id[i-1]) == "0" { // TODO - perhaps make this more elegant and turn ID into slice instead of string? Then we wouldnt have to convert from string byte (string behaves like slice here) to string to compare both
-			xelements[i-1] = BN254.G1mul(helements[i*2], r)
-			fmt.Println(" x ", i, " : ", xelements[i-1].ToString(), " ")
-		} else if string(id[i-1]) == "1" {
-			xelements[i-1] = BN254.G1mul(helements[i*2-1], r)
-			fmt.Println(" x ", i, " : ", xelements[i-1].ToString(), " ")
+	for i := 0; i < l; i++ {
+		if string(id[i]) == "0" { // TODO - perhaps make this more elegant and turn ID into slice instead of string? Then we wouldnt have to convert from string byte (string behaves like slice here) to string to compare both
+			xelements[i] = BN254.G1mul(helements1[i], r)
+			fmt.Println(" x ", i+1, " : ", xelements[i].ToString(), " ")
+		} else if string(id[i]) == "1" {
+			xelements[i] = BN254.G1mul(helements0[i], r)
+			fmt.Println(" x ", i+1, " : ", xelements[i].ToString(), " ")
 		} else {
 			fmt.Println("ID could not be read")
 		}
@@ -218,10 +239,45 @@ func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP
 
 	// -- y0
 
-	y0 := BN254.G1mul(kelements[0], r)
+	y0 = BN254.G1mul(k0, r)
 	fmt.Println(y0)
 
 	// -- y1...y2l
+	// two slices of odd and even, to make is more readable
+	// y1,y3,...
+	g1AlphaOmega := BN254.G1mul(g1, alphaOmega) // g1^alphaOmega
+	yOdd = make([]*BN254.ECP, l)
+	yEven = make([]*BN254.ECP, l)
+
+	for i := 0; i < l; i++ {
+		if string(id[i]) == "0" { // TODO - perhaps make this more elegant and turn ID into slice instead of string? Then we wouldnt have to convert from string byte (string behaves like slice here) to string to compare both
+			temp := BN254.G1mul(kelements1[i], r)
+			temp.Add(g1AlphaOmega)
+			yOdd[i] = temp
+			yEven[i] = kelements0[i]
+			fmt.Println(" y_", (i+1)*2-1, " : ", yOdd[i].ToString(), " ")
+			fmt.Println(" y_", (i+1)*2, " : ", yEven[i].ToString(), " ")
+		} else if string(id[i]) == "1" {
+			temp := BN254.G1mul(kelements0[i], r)
+			temp.Add(g1AlphaOmega)
+			yOdd[i] = temp
+			yEven[i] = kelements1[i]
+			fmt.Println(" y_", (i+1)*2-1, " : ", yOdd[i].ToString(), " ")
+			fmt.Println(" y_", (i+1)*2, " : ", yEven[i].ToString(), " ")
+		} else {
+			fmt.Println("issue")
+		}
+	}
+
+	// z
+	z = BN254.G2mul(g2, r)
+
+	// return private key
+	return x0, y0, xelements, yEven, yOdd, z
+}
+
+// Encrypt
+func encrypt() {
 
 }
 
@@ -237,22 +293,20 @@ func main() {
 
 	// Call Setup to get public parameters
 	// pass rng as parameter, so we only need to initialise it once in main
-	p, g1, g2, helements, kelements, omega, mk, alpha := setup(l, rng)
+	p, g1, g2, h0, k0, helements0, helements1, kelements0, kelements1, omega, mk, alpha := setup(l, rng)
 
 	// Call KeyGen to generate private key
 	// TODO - try this for several users later
 	// TODO - link id to l
 	id := "010" // User's ID
 
+	// Call KeyGen to get private key SK (parameters)
 	// TODO - get mk and alpha from setup (through other func/package?)
-	keyGen(id, mk, p, g1, g2, helements, kelements, omega, rng, alpha)
+	x0, y0, xelements, yEven, yOdd, z := keyGen(id, mk, p, g1, g2, h0, k0, helements0, helements1, kelements0, kelements1, omega, rng, alpha)
 
-	// fmt.Println("p: ", p, "")
-	// fmt.Println("g1: ", g1, "")
-	// fmt.Println("g2: ", g2, "")
-	// fmt.Println("helements: ", helements, "")
-	// fmt.Println("kelements: ", kelements, "")
-	// fmt.Println("omega: ", omega, "")
+	// Call Encrypt
+
+	fmt.Println(x0, y0, xelements, yEven, yOdd, z)
 
 	// end of stopwatch
 	elapsed := time.Since(init)
