@@ -276,7 +276,40 @@ func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP
 }
 
 // Encrypt takes subset (covered list CL and revoked list RL), public key parameters, and message m
-func encrypt(cl, rl string, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, h0, k0 *BN254.ECP, helements0, helements1, kelements0, kelements1 []*BN254.ECP, omega *BN254.FP12, message *BN254.FP12) {
+func encrypt(cl, rl string, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, h0, k0 *BN254.ECP, helements0, helements1, kelements0, kelements1 []*BN254.ECP, omega *BN254.FP12, message *BN254.FP12, rng *core.RAND) {
+
+	q := BN254.NewBIGints(BN254.CURVE_Order) // TODO - do not repeat yourself, consider putting this in main? but it needs to be secret
+
+	// ----------- Encrypt 1
+	// Select random exponent t in Zp
+	t := BN254.Randomnum(q, rng)
+
+	// ----------- Encrypt 1
+	// Return ciphertext Hdr
+
+	// Hdr_S = (C0, C1, C2 C3)
+
+	// C0 = omega^t * M (both GT elements)
+	c0 := omega.Pow(t)
+	c0.Mul(message)
+
+	// c1 = g2^t
+	c1 := BN254.G2mul(g2, t)
+
+	// c2 = H(CL)^t
+	hcl := BN254.NewECP()
+	hcl.Add(helements1[0])
+
+	// for i:= 0; i<l; i++ {
+	// 	hcl[i] =
+	// }
+
+	fmt.Println("hcl should be same as:", hcl)
+	fmt.Println("h1,1:", helements1[0])
+
+	fmt.Println("c0 : ", c0)
+	fmt.Println("Message: ", message.ToString())
+	fmt.Println("c1 : ", c1)
 
 }
 
@@ -312,13 +345,13 @@ func main() {
 	message := BN254.Ate(m2, m1)
 	message = BN254.Fexp(message)
 	val := BN254.GTmember(message)
-	fmt.Println("randGT is GT member: ", val)
+	fmt.Println("message is GT member: ", val)
 
 	// CL
 	cl := "**1*"
 	rl := "*011"
 	// Call Encrypt
-	encrypt(cl, rl, p, g1, g2, h0, k0, helements0, helements1, kelements0, kelements1, omega, message)
+	encrypt(cl, rl, p, g1, g2, h0, k0, helements0, helements1, kelements0, kelements1, omega, message, rng)
 
 	fmt.Println(x0, y0, xelements, yEven, yOdd, z)
 
