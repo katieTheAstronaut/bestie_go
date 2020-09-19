@@ -188,6 +188,7 @@ func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP
 	g1AlphaMinOmega := BN254.G1mul(g1, exp) // g1^(alpha-alphaOmega)
 
 	hID := BN254.NewECP()
+	hID.Copy(h0) // deep copy of ECP via ECP.Copy() method
 
 	// while BESTIE construction theoretically notes to multiply points, in EC this means we need to add all the points of h (point addition)
 	// TODO - this is ridiculously ugly, rewrite this code!
@@ -203,7 +204,7 @@ func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP
 		}
 
 	}
-	hID.Add(h0)
+
 	hExp := BN254.G1mul(hID, r)
 	hExp.Add(g1AlphaMinOmega)
 
@@ -276,7 +277,10 @@ func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP
 }
 
 // Encrypt takes subset (covered list CL and revoked list RL), public key parameters, and message m
-func encrypt(cl, rl string, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, h0, k0 *BN254.ECP, helements0, helements1, kelements0, kelements1 []*BN254.ECP, omega *BN254.FP12, message *BN254.FP12, rng *core.RAND) {
+func encrypt(cl, rl string, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, h0, k0 *BN254.ECP, helements0, helements1, kelements0, kelements1 []*BN254.ECP, omega *BN254.FP12, message *BN254.FP12, rng *core.RAND) (c0 *BN254.FP12, c1 *BN254.ECP2, c2, c3 *BN254.ECP) {
+
+	fmt.Println("\n\n")
+	fmt.Println("-------  Encrypt  ---------")
 
 	q := BN254.NewBIGints(BN254.CURVE_Order) // TODO - do not repeat yourself, consider putting this in main? but it needs to be secret
 
@@ -290,26 +294,101 @@ func encrypt(cl, rl string, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, h0, k0 
 	// Hdr_S = (C0, C1, C2 C3)
 
 	// C0 = omega^t * M (both GT elements)
-	c0 := omega.Pow(t)
+	c0 = omega.Pow(t)
 	c0.Mul(message)
 
 	// c1 = g2^t
-	c1 := BN254.G2mul(g2, t)
+	c1 = BN254.G2mul(g2, t)
 
 	// c2 = H(CL)^t
 	hcl := BN254.NewECP()
-	hcl.Add(helements1[0])
+	hcl.Copy(h0) // deep copy of ECP via ECP.Copy() method
 
-	// for i:= 0; i<l; i++ {
-	// 	hcl[i] =
-	// }
+	fmt.Println("CL : ", cl)
+	for i := 0; i < l; i++ {
+		if string(cl[i]) == "0" {
+			hcl.Add(helements0[i])
+			fmt.Println("h_", i+1, "CLi : ", helements0[i].ToString(), " ")
+		} else if string(cl[i]) == "1" {
+			hcl.Add(helements1[i])
+			fmt.Println("h_", i+1, "CLi : ", helements1[i].ToString(), " ")
+		} else if string(cl[i]) == "*" {
+			hProd := BN254.NewECP()
+			hProd.Copy(helements0[i]) // deep copy of ECP via ECP.Copy() method
+			hProd.Add(helements1[i])
+			hcl.Add(hProd)
+			fmt.Println("h_", i+1, "CLi : ", helements0[i].ToString(), "* ", helements1[i].ToString())
+		} else {
+			fmt.Println("CL could not be read")
+		}
+	}
 
-	fmt.Println("hcl should be same as:", hcl)
-	fmt.Println("h1,1:", helements1[0])
+	c2 = BN254.G1mul(hcl, t)
+
+	// c3 = K(RL)^t
+	krl := BN254.NewECP()
+	krl.Copy(k0)
+
+	fmt.Println("RL : ", rl)
+	for i := 0; i < l; i++ {
+		if string(rl[i]) == "0" {
+			krl.Add(kelements0[i])
+			fmt.Println("k_", i+1, "RLi : ", kelements0[i].ToString(), " ")
+		} else if string(rl[i]) == "1" {
+			krl.Add(kelements1[i])
+			fmt.Println("k_", i+1, "RLi : ", kelements1[i].ToString(), " ")
+		} else if string(rl[i]) == "*" {
+			fmt.Println("* - Do nothing")
+		} else {
+			fmt.Println("RL could not be read")
+		}
+	}
+
+	c3 = BN254.G1mul(krl, t)
 
 	fmt.Println("c0 : ", c0)
 	fmt.Println("Message: ", message.ToString())
 	fmt.Println("c1 : ", c1)
+	fmt.Println("c2 : ", c2)
+	fmt.Println("c3 : ", c3)
+
+	// Return Ciphertext Hdr
+	return c0, c1, c2, c3
+}
+
+// Decrypt takes subset, user's ID, private key SK_ID, and ciphertext HdrS and returns message M
+func decrypt(cl, rl, id string, x0, y0 *BN254.ECP, xelements, yEven, yOdd []*BN254.ECP, z *BN254.ECP2, c0 *BN254.FP12, c1 *BN254.ECP2, c2, c3 *BN254.ECP) {
+
+	fmt.Println("\n\n")
+	fmt.Println("-------  Decrypt  ---------")
+
+	// compute P = bits that are different from revoked list
+	// note:  the set of all indexes of ID, where the ID is not equal to the revoked set and the revoked set is not a wildcard
+
+	pRl := []int{} // empty slice
+
+	for i := 0; i < l; i++ {
+		if string(rl[i]) != "*" && id[i] != rl[i] {
+			pRl = append(pRl, i)
+		}
+	}
+
+	// compute Q = bits that are equal to revoked set
+
+	qRl := []int{} // empty slice
+
+	for i := 0; i < l; i++ {
+		if string(rl[i]) != "*" && id[i] == rl[i] {
+			qRl = append(qRl, i)
+		}
+	}
+
+	// compute d = number of bits in user ID that are different from RL
+	d := len(pRl)
+
+	fmt.Println("P: ", pRl)
+	fmt.Println("Q: ", qRl)
+	fmt.Println("d: ", d)
 
 }
 
@@ -348,12 +427,14 @@ func main() {
 	fmt.Println("message is GT member: ", val)
 
 	// CL
-	cl := "**1*"
-	rl := "*011"
+	cl := "**1"
+	rl := "*01"
 	// Call Encrypt
-	encrypt(cl, rl, p, g1, g2, h0, k0, helements0, helements1, kelements0, kelements1, omega, message, rng)
+	c0, c1, c2, c3 := encrypt(cl, rl, p, g1, g2, h0, k0, helements0, helements1, kelements0, kelements1, omega, message, rng)
 
-	fmt.Println(x0, y0, xelements, yEven, yOdd, z)
+	decrypt(cl, rl, id, x0, y0, xelements, yEven, yOdd, z, c0, c1, c2, c3)
+
+	fmt.Println(x0, y0, xelements, yEven, yOdd, z, c0, c1, c2, c3)
 
 	// end of stopwatch
 	elapsed := time.Since(init)
