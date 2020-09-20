@@ -386,10 +386,73 @@ func decrypt(cl, rl, id string, x0, y0 *BN254.ECP, xelements, yEven, yOdd []*BN2
 	// compute d = number of bits in user ID that are different from RL
 	d := len(pRl)
 
+	// step 4: if d > 0, decrypt message
+
+	if d > 0 {
+		// TODO - if we use structs, parse struct Hdr to single fields
+
+		// compute x' as xAp(ostrophe)
+		xAp := BN254.NewECP()
+		xAp.Copy(x0)
+		// fmt.Println("xAp: (should be x0): ", xAp.ToString())
+
+		for i := 0; i < l; i++ {
+			if string(cl[i]) == "*" {
+				xAp.Add(xelements[i])
+				// fmt.Println("CL at pos ", i, "is ", string(cl[i]), "so x_i is: ", xelements[i].ToString())
+			}
+		}
+		// fmt.Println("xAp: (should no longer be x0): ", xAp.ToString())
+
+		// compute y'
+		yAp := BN254.NewECP()
+		yAp.Copy(y0)
+
+		for i := 0; i < l; i++ {
+			if contains(pRl, i) {
+				yAp.Add(yOdd[i])
+			}
+		}
+
+		for i := 0; i < l; i++ {
+			if contains(qRl, i) {
+				yAp.Add(yEven[i])
+			}
+		}
+
+		// compute d^-1
+		p := BN254.NewBIGints(BN254.Modulus) // TODO - this should not be here, add as parameter to function?
+		dExp := BN254.NewBIGint(d)
+		dExp.ToString()
+		dExp.Invmodp(p) // TODO - not quite sure this is the right inversion
+		fmt.Println("d^-1 = ", dExp)
+
+		yAp = BN254.G1mul(yAp, dExp)
+
+		// decrypt message: m = c0 * e(x'*y', C1)^-1 * e(C2*C3^(d-1), z)
+		xAp2 := BN254.NewECP()
+		xAp2.Copy(xAp)
+		xAp2.Add(yAp)
+		e1 := ////// CONTINUE HERE
+		mes := (c0.Mul(e1))
+
+	}
+
 	fmt.Println("P: ", pRl)
 	fmt.Println("Q: ", qRl)
 	fmt.Println("d: ", d)
 
+}
+
+//-----Helper Functions
+
+func contains(is []int, i int) bool {
+	for i := 0; i < len(is); i++ {
+		if is[i] == i {
+			return true
+		}
+	}
+	return false
 }
 
 func main() {
