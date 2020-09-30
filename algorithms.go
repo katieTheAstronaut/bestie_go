@@ -136,38 +136,26 @@ func setup(l int, rng *core.RAND) (p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, 
 
 	// fmt.Println("Master Key (secret): ", mk, " - is this a point in G1? - ", BN254.G1member(mk), " ")
 
+	//
+	// Printing Parameters
 	fmt.Printf("h_0 = %s\n", h0.ToString())
-	fmt.Printf("k_0 = %s\n", k0.ToString())
 	for i := 0; i < l; i++ {
 		fmt.Printf("h_%d,0 = %s\n", i+1, helements0[i].ToString())
 		fmt.Printf("h_%d,1 = %s\n", i+1, helements1[i].ToString())
+	}
+	fmt.Println("\n")
+
+	fmt.Printf("k_0 = %s\n", k0.ToString())
+	for i := 0; i < l; i++ {
 		fmt.Printf("k_%d,0 = %s\n", i+1, kelements0[i].ToString())
 		fmt.Printf("k_%d,1 = %s\n", i+1, kelements1[i].ToString())
-
-		// val := BN254.G1member(helements[1])
-		// fmt.Println("Is Point member of G1? ", val, " ")
 	}
 
-	// for i := 0; i < 2*l+1; i++ {
-	// 	value2 := krands[i].ToString()
-	// 	if i == 0 {
-	// 		fmt.Printf("k_%d = %s\n", i, value2)
-	// 		fmt.Println(kelements[i])
-	// 	} else if i%2 == 0 {
-	// 		fmt.Printf("k_%d,%d = %s\n", i/2, 1, value2)
-	// 		fmt.Println(kelements[i])
-	// 	} else {
-	// 		fmt.Printf("k_%d,%d = %s\n", (i+1)/2, 0, value2)
-	// 		fmt.Println(kelements[i])
-	// 	}
-	// 	val := BN254.G1member(kelements[1])
-	// 	fmt.Println("Is Point member of G1? ", val, " ")
-	// }
 	return p, g1, g2, h0, k0, helements0, helements1, kelements0, kelements1, omega, mk, alpha
 }
 
 // KeyGen takes user's ID, master key, and public parameters
-func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, h0, k0 *BN254.ECP, helements0, helements1, kelements0, kelements1 []*BN254.ECP, omega *BN254.FP12, rng *core.RAND, alpha *BN254.BIG) (x0, y0 *BN254.ECP, xelements, yEven, yOdd []*BN254.ECP, z *BN254.ECP2) {
+func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, h0, k0 *BN254.ECP, helements0, helements1, kelements0, kelements1 []*BN254.ECP, omega *BN254.FP12, rng *core.RAND, alpha *BN254.BIG) (x0, y0 *BN254.ECP, xelements, yEven, yOdd []*BN254.ECP, z *BN254.ECP2, r *BN254.BIG, g1AlphaMinOmega, g1AlphaOmega *BN254.ECP) {
 
 	fmt.Println("\n\n")
 	fmt.Println("-------  KeyGen  ---------")
@@ -178,14 +166,14 @@ func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP
 	// ----------- KeyGen 1
 	// 1. Select two random exponents alpha_omega and r in Zp
 	alphaOmega := BN254.Randomnum(q, rng)
-	r := BN254.Randomnum(q, rng)
+	r = BN254.Randomnum(q, rng)
 
 	// ----------- KeyGen 2
 	// Create private key SK_ID
 
 	// ---x0
 	exp := alpha.Minus(alphaOmega)
-	g1AlphaMinOmega := BN254.G1mul(g1, exp) // g1^(alpha-alphaOmega)
+	g1AlphaMinOmega = BN254.G1mul(g1, exp) // g1^(alpha-alphaOmega)
 
 	hID := BN254.NewECP()
 	hID.Copy(h0) // deep copy of ECP via ECP.Copy() method
@@ -240,12 +228,12 @@ func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP
 	// -- y0
 
 	y0 = BN254.G1mul(k0, r)
-	fmt.Println(y0)
+	fmt.Println("y0 is the point: ", y0.ToString(), "")
 
 	// -- y1...y2l
 	// two slices of odd and even, to make is more readable
 	// y1,y3,...
-	g1AlphaOmega := BN254.G1mul(g1, alphaOmega) // g1^alphaOmega
+	g1AlphaOmega = BN254.G1mul(g1, alphaOmega) // g1^alphaOmega
 	yOdd = make([]*BN254.ECP, l)
 	yEven = make([]*BN254.ECP, l)
 
@@ -273,11 +261,11 @@ func keyGen(id string, mk *BN254.ECP, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP
 	z = BN254.G2mul(g2, r)
 
 	// return private key
-	return x0, y0, xelements, yEven, yOdd, z
+	return x0, y0, xelements, yEven, yOdd, z, r, g1AlphaMinOmega, g1AlphaOmega
 }
 
 // Encrypt takes subset (covered list CL and revoked list RL), public key parameters, and message m
-func encrypt(cl, rl string, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, h0, k0 *BN254.ECP, helements0, helements1, kelements0, kelements1 []*BN254.ECP, omega *BN254.FP12, message *BN254.FP12, rng *core.RAND) (c0 *BN254.FP12, c1 *BN254.ECP2, c2, c3 *BN254.ECP) {
+func encrypt(cl, rl string, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, h0, k0 *BN254.ECP, helements0, helements1, kelements0, kelements1 []*BN254.ECP, omega *BN254.FP12, message *BN254.FP12, rng *core.RAND, r *BN254.BIG, g1AlphaMinOmega *BN254.ECP) (c0 *BN254.FP12, c1 *BN254.ECP2, c2, c3 *BN254.ECP, krl *BN254.ECP) {
 
 	fmt.Println("\n\n")
 	fmt.Println("-------  Encrypt  ---------")
@@ -326,17 +314,17 @@ func encrypt(cl, rl string, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, h0, k0 
 	c2 = BN254.G1mul(hcl, t)
 
 	// c3 = K(RL)^t
-	krl := BN254.NewECP()
+	krl = BN254.NewECP()
 	krl.Copy(k0)
 
 	fmt.Println("RL : ", rl)
 	for i := 0; i < l; i++ {
 		if string(rl[i]) == "0" {
 			krl.Add(kelements0[i])
-			fmt.Println("k_", i+1, "RLi : ", kelements0[i].ToString(), " ")
+			fmt.Println("k_", i+1, "_0 : ", kelements0[i].ToString(), " ")
 		} else if string(rl[i]) == "1" {
 			krl.Add(kelements1[i])
-			fmt.Println("k_", i+1, "RLi : ", kelements1[i].ToString(), " ")
+			fmt.Println("k_", i+1, "_1 : ", kelements1[i].ToString(), " ")
 		} else if string(rl[i]) == "*" {
 			fmt.Println("* - Do nothing")
 		} else {
@@ -346,21 +334,28 @@ func encrypt(cl, rl string, p *BN254.BIG, g1 *BN254.ECP, g2 *BN254.ECP2, h0, k0 
 
 	c3 = BN254.G1mul(krl, t)
 
-	fmt.Println("c0 : ", c0)
-	fmt.Println("Message: ", message.ToString())
-	fmt.Println("c1 : ", c1)
-	fmt.Println("c2 : ", c2)
-	fmt.Println("c3 : ", c3)
+	// fmt.Println("c0 : ", c0)
+	// // fmt.Println("Message: ", message.ToString())
+	// fmt.Println("c1 : ", c1)
+	// fmt.Println("c2 : ", c2)
+	// fmt.Println("c3 : ", c3)
+
+	// -- Test
+	hclr := BN254.G1mul(hcl, r)
+	hclr.Add(g1AlphaMinOmega)
+	fmt.Println("x' should be the same as g1^.. *hclr:", hclr.ToString())
 
 	// Return Ciphertext Hdr
-	return c0, c1, c2, c3
+	return c0, c1, c2, c3, krl
 }
 
 // Decrypt takes subset, user's ID, private key SK_ID, and ciphertext HdrS and returns message M
-func decrypt(cl, rl, id string, x0, y0 *BN254.ECP, xelements, yEven, yOdd []*BN254.ECP, z *BN254.ECP2, c0 *BN254.FP12, c1 *BN254.ECP2, c2, c3 *BN254.ECP) {
+func decrypt(cl, rl, id string, x0, y0 *BN254.ECP, xelements, yEven, yOdd []*BN254.ECP, z *BN254.ECP2, c0 *BN254.FP12, c1 *BN254.ECP2, c2, c3 *BN254.ECP, krl *BN254.ECP, r *BN254.BIG, g1AlphaOmega *BN254.ECP) (mes *BN254.FP12) {
 
 	fmt.Println("\n\n")
 	fmt.Println("-------  Decrypt  ---------")
+
+	q := BN254.NewBIGints(BN254.CURVE_Order) // TODO - do not repeat yourself, consider putting this in main? but it needs to be secret
 
 	// compute P = bits that are different from revoked list
 	// note:  the set of all indexes of ID, where the ID is not equal to the revoked set and the revoked set is not a wildcard
@@ -369,7 +364,7 @@ func decrypt(cl, rl, id string, x0, y0 *BN254.ECP, xelements, yEven, yOdd []*BN2
 
 	for i := 0; i < l; i++ {
 		if string(rl[i]) != "*" && id[i] != rl[i] {
-			pRl = append(pRl, i)
+			pRl = append(pRl, i+1) // we need i+1 because the scheme dictates that an ID's first index is 1, not 0
 		}
 	}
 
@@ -379,7 +374,7 @@ func decrypt(cl, rl, id string, x0, y0 *BN254.ECP, xelements, yEven, yOdd []*BN2
 
 	for i := 0; i < l; i++ {
 		if string(rl[i]) != "*" && id[i] == rl[i] {
-			qRl = append(qRl, i)
+			qRl = append(qRl, i+1)
 		}
 	}
 
@@ -387,6 +382,10 @@ func decrypt(cl, rl, id string, x0, y0 *BN254.ECP, xelements, yEven, yOdd []*BN2
 	d := len(pRl)
 
 	// step 4: if d > 0, decrypt message
+
+	fmt.Println("P: ", pRl)
+	fmt.Println("Q: ", qRl)
+	fmt.Println("d: ", d)
 
 	if d > 0 {
 		// TODO - if we use structs, parse struct Hdr to single fields
@@ -402,53 +401,122 @@ func decrypt(cl, rl, id string, x0, y0 *BN254.ECP, xelements, yEven, yOdd []*BN2
 				// fmt.Println("CL at pos ", i, "is ", string(cl[i]), "so x_i is: ", xelements[i].ToString())
 			}
 		}
-		// fmt.Println("xAp: (should no longer be x0): ", xAp.ToString())
+		fmt.Println("x':", xAp.ToString())
 
 		// compute y'
 		yAp := BN254.NewECP()
 		yAp.Copy(y0)
-
-		for i := 0; i < l; i++ {
+		fmt.Println("yap: ", yAp.ToString())
+		for i := 1; i < 4; i++ {
 			if contains(pRl, i) {
-				yAp.Add(yOdd[i])
+				yAp.Add(yOdd[i-1])
+				fmt.Println("p-added to yap")
+				fmt.Println("P", i, " is ", pRl[i-2], ", so y_", (2*i)-1, "is: ", yOdd[i-1].ToString())
+			} else {
+				fmt.Println("p-not added to yap")
 			}
 		}
+
+		fmt.Println("yap: ", yAp.ToString())
 
 		for i := 0; i < l; i++ {
 			if contains(qRl, i) {
 				yAp.Add(yEven[i])
+				fmt.Println("q-added to yap")
+				// fmt.Println("Q", i, " is ", qRl[i], ", so y_", (2 * i), "is: ", yEven[i].ToString())
+
+			} else {
+				fmt.Println("q-not added to yap")
+
 			}
 		}
 
+		fmt.Println("yap_done: ", yAp.ToString())
+
+		// Test
+		// yApT := BN254.NewECP()
+		// yApT.Copy(y0)
+		// yApT.Add(yOdd[0])
+		// yApT.Add(yOdd[1])
+		// fmt.Println("y0 + both points should be the same yap: ", yApT.ToString())
+
 		// compute d^-1
-		p := BN254.NewBIGints(BN254.Modulus) // TODO - this should not be here, add as parameter to function?
+
+		// p := BN254.NewBIGints(BN254.Modulus)     // TODO - this should not be here, add as parameter to function?
 		dExp := BN254.NewBIGint(d)
-		dExp.ToString()
-		dExp.Invmodp(p) // TODO - not quite sure this is the right inversion
-		fmt.Println("d^-1 = ", dExp)
+		fmt.Println("d as Big is: ", dExp.ToString())
+		dExp.Invmodp(q) // TODO - not quite sure this is the right inversion
+		fmt.Println("d^-1 = ", dExp.ToString())
 
 		yAp = BN254.G1mul(yAp, dExp)
+
+		fmt.Println("y' = ", yAp.ToString())
+		// yApTd := BN254.G1mul(yApT, dExp)
+		// fmt.Println("y0 + both points + ^d^-^should be same as yap: ", yApTd.ToString())
 
 		// decrypt message: m = c0 * e(x'*y', C1)^-1 * e(C2*C3^(d-1), z)
 		xAp2 := BN254.NewECP()
 		xAp2.Copy(xAp)
 		xAp2.Add(yAp)
-		e1 := ////// CONTINUE HERE
-		mes := (c0.Mul(e1))
 
+		// min1 := BN254.NewBIGint(1)
+		// fmt.Println("min1: ", min1.ToString())
+		// min1 = BN254.Modneg(min1, q)
+		// fmt.Println("min1: ", min1.ToString())
+
+		e1 := BN254.Ate(c1, xAp2)
+		e1 = BN254.Fexp(e1)
+		// e1 = e1.Pow(min1)
+		// try inverse:
+		e1.Inverse()
+
+		fmt.Println("d^-1 = ", dExp.ToString())
+		c3Ap := BN254.G1mul(c3, dExp)
+
+		c2Ap := BN254.NewECP()
+		c2Ap.Copy(c2)
+		c2Ap.Add(c3Ap)
+
+		e2 := BN254.Ate(z, c2Ap)
+		e2 = BN254.Fexp(e2)
+
+		mes = BN254.NewFP12copy(c0)
+		mes.Mul(e1)
+		mes.Mul(e2)
+
+		// fmt.Println("Message:", mes.ToString())
+
+	} else {
+		fmt.Println("error: d = ", d, "the ID is part of the revoked set!")
 	}
 
 	fmt.Println("P: ", pRl)
 	fmt.Println("Q: ", qRl)
 	fmt.Println("d: ", d)
 
+	// --- TESTING
+
+	dExp := BN254.NewBIGint(d)
+	fmt.Println("d as Big is: ", dExp.ToString())
+	dExp.Invmodp(q) // TODO - not quite sure this is the right inversion
+	fmt.Println("d^-1 = ", dExp.ToString())
+
+	krlr := BN254.G1mul(krl, r)
+	fmt.Println("k(rl)^r should be the same as y0 with both points added?: ", krlr.ToString())
+	krlrd := BN254.G1mul(krlr, dExp)
+	krlrd.Add(g1AlphaOmega)
+
+	fmt.Println("y' should be the same as: ", krlrd.ToString())
+
+	return mes
+
 }
 
 //-----Helper Functions
 
-func contains(is []int, i int) bool {
+func contains(is []int, in int) bool {
 	for i := 0; i < len(is); i++ {
-		if is[i] == i {
+		if is[i] == in {
 			return true
 		}
 	}
@@ -463,18 +531,20 @@ func main() {
 	// Initialise Random number generator
 	rng := initRNG()
 
+	// Call KeyGen to generate private key
+	// TODO - try this for several users later
+	// TODO - link id to l
+	id := "011" // User's ID
+	cl := "*11" // CL - covered list of IDs
+	rl := "*00" // RL - revoked list of ids
+
 	// Call Setup to get public parameters
 	// pass rng as parameter, so we only need to initialise it once in main
 	p, g1, g2, h0, k0, helements0, helements1, kelements0, kelements1, omega, mk, alpha := setup(l, rng)
 
-	// Call KeyGen to generate private key
-	// TODO - try this for several users later
-	// TODO - link id to l
-	id := "010" // User's ID
-
 	// Call KeyGen to get private key SK (parameters)
 	// TODO - get mk and alpha from setup (through other func/package?)
-	x0, y0, xelements, yEven, yOdd, z := keyGen(id, mk, p, g1, g2, h0, k0, helements0, helements1, kelements0, kelements1, omega, rng, alpha)
+	x0, y0, xelements, yEven, yOdd, z, r, g1AlphaMinOmega, g1AlphaOmega := keyGen(id, mk, p, g1, g2, h0, k0, helements0, helements1, kelements0, kelements1, omega, rng, alpha)
 
 	// Create message M in GT
 	q := BN254.NewBIGints(BN254.CURVE_Order)
@@ -489,13 +559,13 @@ func main() {
 	val := BN254.GTmember(message)
 	fmt.Println("message is GT member: ", val)
 
-	// CL
-	cl := "**1"
-	rl := "*01"
 	// Call Encrypt
-	c0, c1, c2, c3 := encrypt(cl, rl, p, g1, g2, h0, k0, helements0, helements1, kelements0, kelements1, omega, message, rng)
+	c0, c1, c2, c3, krl := encrypt(cl, rl, p, g1, g2, h0, k0, helements0, helements1, kelements0, kelements1, omega, message, rng, r, g1AlphaMinOmega)
 
-	decrypt(cl, rl, id, x0, y0, xelements, yEven, yOdd, z, c0, c1, c2, c3)
+	mes := decrypt(cl, rl, id, x0, y0, xelements, yEven, yOdd, z, c0, c1, c2, c3, krl, r, g1AlphaOmega)
+
+	functional := message.Equals(mes) // test if encrypted message is same as decrypted message
+	fmt.Println("Message is same: ", functional)
 
 	fmt.Println(x0, y0, xelements, yEven, yOdd, z, c0, c1, c2, c3)
 
