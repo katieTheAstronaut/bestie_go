@@ -188,7 +188,7 @@ func setup(l int, rng *core.RAND) (pubKey *pk, mk *BN254.ECP, alpha *BN254.BIG) 
 }
 
 // KeyGen takes user's ID, master key, and public parameters
-func keyGen(id string, mk *BN254.ECP, pubKey *pk, rng *core.RAND, alpha *BN254.BIG) (x0, y0 *BN254.ECP, xelements, yEven, yOdd []*BN254.ECP, z *BN254.ECP2, r *BN254.BIG, g1AlphaMinOmega, g1AlphaOmega *BN254.ECP) {
+func keyGen(id string, mk *BN254.ECP, pubKey *pk, rng *core.RAND, alpha *BN254.BIG) (secKey *sk, r *BN254.BIG, g1AlphaMinOmega, g1AlphaOmega *BN254.ECP) {
 
 	fmt.Println("\n\n")
 	fmt.Println("-------  KeyGen  ---------")
@@ -229,7 +229,7 @@ func keyGen(id string, mk *BN254.ECP, pubKey *pk, rng *core.RAND, alpha *BN254.B
 	hExp := BN254.G1mul(hID, r)
 	hExp.Add(g1AlphaMinOmega)
 
-	x0 = hExp
+	x0 := hExp
 	fmt.Println("x0 is the point: ", x0.ToString(), "")
 
 	// Test if adding the points for ID 010 will give the same resulting point --> it will
@@ -244,7 +244,7 @@ func keyGen(id string, mk *BN254.ECP, pubKey *pk, rng *core.RAND, alpha *BN254.B
 
 	// ---x1 - xl
 
-	xelements = make([]*BN254.ECP, l) // make a slice for x1 to xl
+	xelements := make([]*BN254.ECP, l) // make a slice for x1 to xl
 
 	for i := 0; i < l; i++ {
 		if string(id[i]) == "0" { // TODO - perhaps make this more elegant and turn ID into slice instead of string? Then we wouldnt have to convert from string byte (string behaves like slice here) to string to compare both
@@ -260,15 +260,15 @@ func keyGen(id string, mk *BN254.ECP, pubKey *pk, rng *core.RAND, alpha *BN254.B
 
 	// -- y0
 
-	y0 = BN254.G1mul(pubKey.k0, r)
+	y0 := BN254.G1mul(pubKey.k0, r)
 	fmt.Println("y0 is the point: ", y0.ToString(), "")
 
 	// -- y1...y2l
 	// two slices of odd and even, to make is more readable
 	// y1,y3,...
 	g1AlphaOmega = BN254.G1mul(pubKey.g1, alphaOmega) // g1^alphaOmega
-	yOdd = make([]*BN254.ECP, l)
-	yEven = make([]*BN254.ECP, l)
+	yOdd := make([]*BN254.ECP, l)
+	yEven := make([]*BN254.ECP, l)
 
 	for i := 0; i < l; i++ {
 		if string(id[i]) == "0" { // TODO - perhaps make this more elegant and turn ID into slice instead of string? Then we wouldnt have to convert from string byte (string behaves like slice here) to string to compare both
@@ -291,14 +291,16 @@ func keyGen(id string, mk *BN254.ECP, pubKey *pk, rng *core.RAND, alpha *BN254.B
 	}
 
 	// z
-	z = BN254.G2mul(pubKey.g2, r)
+	z := BN254.G2mul(pubKey.g2, r)
+
+	secKey = &sk{x0, xelements, y0, yEven, yOdd, z}
 
 	// return private key
-	return x0, y0, xelements, yEven, yOdd, z, r, g1AlphaMinOmega, g1AlphaOmega
+	return secKey, r, g1AlphaMinOmega, g1AlphaOmega
 }
 
 // Encrypt takes subset (covered list CL and revoked list RL), public key parameters, and message m
-func encrypt(cl, rl string, pubKey *pk, message *BN254.FP12, rng *core.RAND, r *BN254.BIG, g1AlphaMinOmega *BN254.ECP) (c0 *BN254.FP12, c1 *BN254.ECP2, c2, c3 *BN254.ECP, krl *BN254.ECP) {
+func encrypt(cl, rl string, pubKey *pk, message *BN254.FP12, rng *core.RAND, r *BN254.BIG, g1AlphaMinOmega *BN254.ECP) (cipher *hdr, krl *BN254.ECP) {
 
 	fmt.Println("\n\n")
 	fmt.Println("-------  Encrypt  ---------")
@@ -315,11 +317,11 @@ func encrypt(cl, rl string, pubKey *pk, message *BN254.FP12, rng *core.RAND, r *
 	// Hdr_S = (C0, C1, C2 C3)
 
 	// C0 = omega^t * M (both GT elements)
-	c0 = pubKey.omega.Pow(t)
+	c0 := pubKey.omega.Pow(t)
 	c0.Mul(message)
 
 	// c1 = g2^t
-	c1 = BN254.G2mul(pubKey.g2, t)
+	c1 := BN254.G2mul(pubKey.g2, t)
 
 	// c2 = H(CL)^t
 	hcl := BN254.NewECP()
@@ -344,7 +346,7 @@ func encrypt(cl, rl string, pubKey *pk, message *BN254.FP12, rng *core.RAND, r *
 		}
 	}
 
-	c2 = BN254.G1mul(hcl, t)
+	c2 := BN254.G1mul(hcl, t)
 
 	// c3 = K(RL)^t
 	krl = BN254.NewECP()
@@ -365,7 +367,7 @@ func encrypt(cl, rl string, pubKey *pk, message *BN254.FP12, rng *core.RAND, r *
 		}
 	}
 
-	c3 = BN254.G1mul(krl, t)
+	c3 := BN254.G1mul(krl, t)
 
 	// fmt.Println("c0 : ", c0)
 	// // fmt.Println("Message: ", message.ToString())
@@ -378,12 +380,14 @@ func encrypt(cl, rl string, pubKey *pk, message *BN254.FP12, rng *core.RAND, r *
 	hclr.Add(g1AlphaMinOmega)
 	fmt.Println("x' should be the same as g1^.. *hclr:", hclr.ToString())
 
+	cipher = &hdr{c0, c1, c2, c3}
+
 	// Return Ciphertext Hdr
-	return c0, c1, c2, c3, krl
+	return cipher, krl
 }
 
 // Decrypt takes subset, user's ID, private key SK_ID, and ciphertext HdrS and returns message M
-func decrypt(cl, rl, id string, x0, y0 *BN254.ECP, xelements, yEven, yOdd []*BN254.ECP, z *BN254.ECP2, c0 *BN254.FP12, c1 *BN254.ECP2, c2, c3 *BN254.ECP, krl *BN254.ECP, r *BN254.BIG, g1AlphaOmega *BN254.ECP) (mes *BN254.FP12) {
+func decrypt(cl, rl, id string, secKey *sk, cipher *hdr, krl *BN254.ECP, r *BN254.BIG, g1AlphaOmega *BN254.ECP) (mes *BN254.FP12) {
 
 	fmt.Println("\n\n")
 	fmt.Println("-------  Decrypt  ---------")
@@ -425,12 +429,12 @@ func decrypt(cl, rl, id string, x0, y0 *BN254.ECP, xelements, yEven, yOdd []*BN2
 
 		// compute x' as xAp(ostrophe)
 		xAp := BN254.NewECP()
-		xAp.Copy(x0)
+		xAp.Copy(secKey.x0)
 		// fmt.Println("xAp: (should be x0): ", xAp.ToString())
 
 		for i := 0; i < l; i++ {
 			if string(cl[i]) == "*" {
-				xAp.Add(xelements[i])
+				xAp.Add(secKey.xelements[i])
 				// fmt.Println("CL at pos ", i, "is ", string(cl[i]), "so x_i is: ", xelements[i].ToString())
 			}
 		}
@@ -438,11 +442,11 @@ func decrypt(cl, rl, id string, x0, y0 *BN254.ECP, xelements, yEven, yOdd []*BN2
 
 		// compute y'
 		yAp := BN254.NewECP()
-		yAp.Copy(y0)
+		yAp.Copy(secKey.y0)
 		// fmt.Println("yap: ", yAp.ToString())
 		for i := 1; i < 4; i++ {
 			if contains(pRl, i) {
-				yAp.Add(yOdd[i-1])
+				yAp.Add(secKey.yOdd[i-1])
 				// fmt.Println("p-added to yap")
 				// fmt.Println("P", i, " is ", pRl[i-2], ", so y_", (2*i)-1, "is: ", yOdd[i-1].ToString())
 			} else {
@@ -454,7 +458,7 @@ func decrypt(cl, rl, id string, x0, y0 *BN254.ECP, xelements, yEven, yOdd []*BN2
 
 		for i := 0; i < l; i++ {
 			if contains(qRl, i) {
-				yAp.Add(yEven[i])
+				yAp.Add(secKey.yEven[i])
 				// fmt.Println("q-added to yap")
 				// fmt.Println("Q", i, " is ", qRl[i], ", so y_", (2 * i), "is: ", yEven[i].ToString())
 
@@ -480,19 +484,19 @@ func decrypt(cl, rl, id string, x0, y0 *BN254.ECP, xelements, yEven, yOdd []*BN2
 		xAp2.Copy(xAp)
 		xAp2.Add(yAp)
 
-		e1 := BN254.Ate(c1, xAp2)
+		e1 := BN254.Ate(cipher.c1, xAp2)
 		e1 = BN254.Fexp(e1)
 		e1.Inverse() // ^-1
 
-		c3Ap := BN254.G1mul(c3, dExp)
+		c3Ap := BN254.G1mul(cipher.c3, dExp)
 		c2Ap := BN254.NewECP()
-		c2Ap.Copy(c2)
+		c2Ap.Copy(cipher.c2)
 		c2Ap.Add(c3Ap)
 
-		e2 := BN254.Ate(z, c2Ap)
+		e2 := BN254.Ate(secKey.z, c2Ap)
 		e2 = BN254.Fexp(e2)
 
-		mes = BN254.NewFP12copy(c0)
+		mes = BN254.NewFP12copy(cipher.c0)
 		mes.Mul(e1)
 		mes.Mul(e2)
 
@@ -557,7 +561,7 @@ func main() {
 
 	// Call KeyGen to get private key SK (parameters)
 	// TODO - get mk and alpha from setup (through other func/package?)
-	x0, y0, xelements, yEven, yOdd, z, r, g1AlphaMinOmega, g1AlphaOmega := keyGen(id, mk, pubKey, rng, alpha)
+	secKey, r, g1AlphaMinOmega, g1AlphaOmega := keyGen(id, mk, pubKey, rng, alpha)
 
 	// Create message M in GT
 	q := BN254.NewBIGints(BN254.CURVE_Order)
@@ -574,9 +578,9 @@ func main() {
 	fmt.Println("original message: ", message.ToString())
 
 	// Call Encrypt
-	c0, c1, c2, c3, krl := encrypt(cl, rl, pubKey, message, rng, r, g1AlphaMinOmega)
+	cipher, krl := encrypt(cl, rl, pubKey, message, rng, r, g1AlphaMinOmega)
 
-	mes := decrypt(cl, rl, id, x0, y0, xelements, yEven, yOdd, z, c0, c1, c2, c3, krl, r, g1AlphaOmega)
+	mes := decrypt(cl, rl, id, secKey, cipher, krl, r, g1AlphaOmega)
 
 	functional := message.Equals(mes) // test if encrypted message is same as decrypted message
 	fmt.Println("\n")
