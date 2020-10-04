@@ -9,7 +9,7 @@ import (
 	"github.com/miracl/core/go/core/BN254"
 )
 
-// Structs
+// ----------- Structs
 
 type pk struct { // TODO - groups g1,g2,gt and e are missing, how do we put them in here?
 	p          *BN254.BIG
@@ -40,17 +40,21 @@ type hdr struct {
 	c3 *BN254.ECP
 }
 
+// ----------- Package Scope (global) Variables
+var l = 3 // ID bit Length - // TODO - get rid of this
+var rng *core.RAND
+
 // Function to Initialise the Random Number Generator (call only once at beginning of program!!!)
 // Since the curve order defines how many unique curve points there are, to get a random point (by multiplying the generator and alpha) we need alpha to be a random number between 1 and the curve order q, as such we use q as the modulus in Randomnum()
 // rng is a random number generator - here we can use the rng from Rand.go
 // In order to instantiate rng, we also need a seed as source for the randomness. This seed should typically be a non-fixed seed, as we will otherwise get the same output every time. Hence we use time.Now().UnixNano() --> see https://golang.org/pkg/math/rand/ for more info -> we'll use package math/rand for this, using its generator and the non-fixed seed to create the seed for our core rng.
-func initRNG() *core.RAND {
+func initRNG() {
 	var raw [128]byte
 
 	seed := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(seed)
 
-	rng := core.NewRAND()
+	rng = core.NewRAND()
 	rng.Clean()
 
 	// TODO - check if this is truly non-deterministic!
@@ -59,16 +63,11 @@ func initRNG() *core.RAND {
 	}
 
 	rng.Seed(128, raw[:])
-	return rng
 }
-
-// ----------- (Global) Parameters
-// TODO - do we want global parameters?
-var l = 3 // ID bit Length
 
 // Setup takes l -
 // TODO: what about lambda? Does it make sense in this implementation via curve?
-func setup(l int, rng *core.RAND) (pubKey *pk, mk *BN254.ECP, alpha *BN254.BIG) {
+func setup(l int) (pubKey *pk, mk *BN254.ECP, alpha *BN254.BIG) {
 	// ----------- Setup 1
 	// 1. Generate bilinear groups of order p
 	// - already done once you chose the curve
@@ -188,7 +187,7 @@ func setup(l int, rng *core.RAND) (pubKey *pk, mk *BN254.ECP, alpha *BN254.BIG) 
 }
 
 // KeyGen takes user's ID, master key, and public parameters
-func keyGen(id string, mk *BN254.ECP, pubKey *pk, rng *core.RAND, alpha *BN254.BIG) (secKey *sk, r *BN254.BIG, g1AlphaMinOmega, g1AlphaOmega *BN254.ECP) {
+func keyGen(id string, mk *BN254.ECP, pubKey *pk, alpha *BN254.BIG) (secKey *sk, r *BN254.BIG, g1AlphaMinOmega, g1AlphaOmega *BN254.ECP) {
 
 	fmt.Println("\n\n")
 	fmt.Println("-------  KeyGen  ---------")
@@ -300,7 +299,7 @@ func keyGen(id string, mk *BN254.ECP, pubKey *pk, rng *core.RAND, alpha *BN254.B
 }
 
 // Encrypt takes subset (covered list CL and revoked list RL), public key parameters, and message m
-func encrypt(cl, rl string, pubKey *pk, message *BN254.FP12, rng *core.RAND, r *BN254.BIG, g1AlphaMinOmega *BN254.ECP) (cipher *hdr, krl *BN254.ECP) {
+func encrypt(cl, rl string, pubKey *pk, message *BN254.FP12, r *BN254.BIG, g1AlphaMinOmega *BN254.ECP) (cipher *hdr, krl *BN254.ECP) {
 
 	fmt.Println("\n\n")
 	fmt.Println("-------  Encrypt  ---------")
@@ -545,7 +544,7 @@ func main() {
 	init := time.Now()
 
 	// Initialise Random number generator
-	rng := initRNG()
+	initRNG()
 
 	// Call KeyGen to generate private key
 	// TODO - try this for several users later
@@ -557,11 +556,11 @@ func main() {
 
 	// Call Setup to get public parameters
 	// pass rng as parameter, so we only need to initialise it once in main
-	pubKey, mk, alpha := setup(l, rng) // TODO - only pubkey should be returned here?
+	pubKey, mk, alpha := setup(l) // TODO - only pubkey should be returned here?
 
 	// Call KeyGen to get private key SK (parameters)
 	// TODO - get mk and alpha from setup (through other func/package?)
-	secKey, r, g1AlphaMinOmega, g1AlphaOmega := keyGen(id, mk, pubKey, rng, alpha)
+	secKey, r, g1AlphaMinOmega, g1AlphaOmega := keyGen(id, mk, pubKey, alpha)
 
 	// Create message M in GT
 	q := BN254.NewBIGints(BN254.CURVE_Order)
@@ -578,7 +577,7 @@ func main() {
 	fmt.Println("original message: ", message.ToString())
 
 	// Call Encrypt
-	cipher, krl := encrypt(cl, rl, pubKey, message, rng, r, g1AlphaMinOmega)
+	cipher, krl := encrypt(cl, rl, pubKey, message, r, g1AlphaMinOmega)
 
 	mes := decrypt(cl, rl, id, secKey, cipher, krl, r, g1AlphaOmega)
 
