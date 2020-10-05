@@ -41,7 +41,6 @@ type hdr struct {
 }
 
 // ----------- Package Scope (global) Variables
-var l = 3 // ID bit Length - // TODO - get rid of this
 var rng *core.RAND
 
 // Function to Initialise the Random Number Generator (call only once at beginning of program!!!)
@@ -194,7 +193,7 @@ func keyGen(id string, mk *BN254.ECP, pubKey *pk, alpha *BN254.BIG) (secKey *sk,
 	fmt.Println("The ID is: ", id, "")
 
 	q := BN254.NewBIGints(BN254.CURVE_Order) // TODO - do not repeat yourself, consider putting this in main? but it needs to be secret
-
+	l := len(id)
 	// ----------- KeyGen 1
 	// 1. Select two random exponents alpha_omega and r in Zp
 	alphaOmega := BN254.Randomnum(q, rng)
@@ -246,7 +245,7 @@ func keyGen(id string, mk *BN254.ECP, pubKey *pk, alpha *BN254.BIG) (secKey *sk,
 	xelements := make([]*BN254.ECP, l) // make a slice for x1 to xl
 
 	for i := 0; i < l; i++ {
-		if string(id[i]) == "0" { // TODO - perhaps make this more elegant and turn ID into slice instead of string? Then we wouldnt have to convert from string byte (string behaves like slice here) to string to compare both
+		if string(id[i]) == "0" {
 			xelements[i] = BN254.G1mul(pubKey.helements1[i], r)
 			fmt.Println(" x ", i+1, " : ", xelements[i].ToString(), " ")
 		} else if string(id[i]) == "1" {
@@ -274,14 +273,16 @@ func keyGen(id string, mk *BN254.ECP, pubKey *pk, alpha *BN254.BIG) (secKey *sk,
 			temp := BN254.G1mul(pubKey.kelements1[i], r)
 			temp.Add(g1AlphaOmega)
 			yOdd[i] = temp
-			yEven[i] = pubKey.kelements0[i]
+			temp2 := BN254.G1mul(pubKey.kelements0[i], r)
+			yEven[i] = temp2
 			fmt.Println(" y_", (i+1)*2-1, " : ", yOdd[i].ToString(), " ")
 			fmt.Println(" y_", (i+1)*2, " : ", yEven[i].ToString(), " ")
 		} else if string(id[i]) == "1" {
 			temp := BN254.G1mul(pubKey.kelements0[i], r)
 			temp.Add(g1AlphaOmega)
 			yOdd[i] = temp
-			yEven[i] = pubKey.kelements1[i]
+			temp2 := BN254.G1mul(pubKey.kelements1[i], r)
+			yEven[i] = temp2
 			fmt.Println(" y_", (i+1)*2-1, " : ", yOdd[i].ToString(), " ")
 			fmt.Println(" y_", (i+1)*2, " : ", yEven[i].ToString(), " ")
 		} else {
@@ -305,7 +306,7 @@ func encrypt(cl, rl string, pubKey *pk, message *BN254.FP12, r *BN254.BIG, g1Alp
 	fmt.Println("-------  Encrypt  ---------")
 
 	q := BN254.NewBIGints(BN254.CURVE_Order) // TODO - do not repeat yourself, consider putting this in main? but it needs to be secret
-
+	l := len(cl)
 	// ----------- Encrypt 1
 	// Select random exponent t in Zp
 	t := BN254.Randomnum(q, rng)
@@ -392,7 +393,7 @@ func decrypt(cl, rl, id string, secKey *sk, cipher *hdr, krl *BN254.ECP, r *BN25
 	fmt.Println("-------  Decrypt  ---------")
 
 	q := BN254.NewBIGints(BN254.CURVE_Order) // TODO - do not repeat yourself, consider putting this in main? but it needs to be secret
-
+	l := len(id)
 	// compute P = bits that are different from revoked list
 	// note:  the set of all indexes of ID, where the ID is not equal to the revoked set and the revoked set is not a wildcard
 
@@ -434,7 +435,7 @@ func decrypt(cl, rl, id string, secKey *sk, cipher *hdr, krl *BN254.ECP, r *BN25
 		for i := 0; i < l; i++ {
 			if string(cl[i]) == "*" {
 				xAp.Add(secKey.xelements[i])
-				// fmt.Println("CL at pos ", i, "is ", string(cl[i]), "so x_i is: ", xelements[i].ToString())
+				fmt.Println("CL at pos ", i, "is ", string(cl[i]), "so x_i is: ", secKey.xelements[i].ToString())
 			}
 		}
 		fmt.Println("x':", xAp.ToString())
@@ -443,11 +444,11 @@ func decrypt(cl, rl, id string, secKey *sk, cipher *hdr, krl *BN254.ECP, r *BN25
 		yAp := BN254.NewECP()
 		yAp.Copy(secKey.y0)
 		// fmt.Println("yap: ", yAp.ToString())
-		for i := 1; i < 4; i++ {
+		for i := 1; i < l+1; i++ {
 			if contains(pRl, i) {
 				yAp.Add(secKey.yOdd[i-1])
-				// fmt.Println("p-added to yap")
-				// fmt.Println("P", i, " is ", pRl[i-2], ", so y_", (2*i)-1, "is: ", yOdd[i-1].ToString())
+				fmt.Println("p-added to yap")
+				fmt.Println("P contains", i, " so y_", (2*i)-1, "is: ", secKey.yOdd[i-1].ToString())
 			} else {
 				// fmt.Println("p-not added to yap")
 			}
@@ -455,11 +456,11 @@ func decrypt(cl, rl, id string, secKey *sk, cipher *hdr, krl *BN254.ECP, r *BN25
 
 		// fmt.Println("yap: ", yAp.ToString())
 
-		for i := 0; i < l; i++ {
+		for i := 1; i < l+1; i++ {
 			if contains(qRl, i) {
-				yAp.Add(secKey.yEven[i])
-				// fmt.Println("q-added to yap")
-				// fmt.Println("Q", i, " is ", qRl[i], ", so y_", (2 * i), "is: ", yEven[i].ToString())
+				yAp.Add(secKey.yEven[i-1])
+				fmt.Println("q-added to yap")
+				fmt.Println("Q contains", i, "so y_", (2 * i), "is: ", secKey.yEven[i-1].ToString())
 
 			} else {
 				// fmt.Println("q-not added to yap")
@@ -511,17 +512,17 @@ func decrypt(cl, rl, id string, secKey *sk, cipher *hdr, krl *BN254.ECP, r *BN25
 
 	// --- TESTING
 
-	// dExp := BN254.NewBIGint(d)
-	// // fmt.Println("d as Big is: ", dExp.ToString())
-	// dExp.Invmodp(q)
-	// // fmt.Println("d^-1 = ", dExp.ToString())
+	dExp := BN254.NewBIGint(d)
+	// fmt.Println("d as Big is: ", dExp.ToString())
+	dExp.Invmodp(q)
+	// fmt.Println("d^-1 = ", dExp.ToString())
 
-	// krlr := BN254.G1mul(krl, r)
-	// fmt.Println("k(rl)^r should be the same as y0 with both points added?: ", krlr.ToString())
-	// krlrd := BN254.G1mul(krlr, dExp)
-	// krlrd.Add(g1AlphaOmega)
+	krlr := BN254.G1mul(krl, r)
+	fmt.Println("k(rl)^r should be the same as y0 with both points added?: ", krlr.ToString())
+	krlrd := BN254.G1mul(krlr, dExp)
+	krlrd.Add(g1AlphaOmega)
 
-	// fmt.Println("y' should be the same as: ", krlrd.ToString())
+	fmt.Println("y' should be the same as: ", krlrd.ToString())
 
 	return mes
 
@@ -538,6 +539,15 @@ func contains(is []int, in int) bool {
 	return false
 }
 
+func getIndex(s int, sl []int) int {
+	for key, val := range sl {
+		if s == val {
+			return key
+		}
+	}
+	return -1
+}
+
 func main() {
 
 	// measure time of algorithms
@@ -548,14 +558,14 @@ func main() {
 
 	// Call KeyGen to generate private key
 	// TODO - try this for several users later
-	// TODO - link id to l
-	id := "011" // User's ID
-	cl := "*11" // CL - covered list of IDs
-	rl := "*00" // RL - revoked list of ids
+	id := "010" // User's ID
+	cl := "**1" // CL - covered list of IDs
+	rl := "*11" // RL - revoked list of ids
+
+	l := len(id) // ID bit length
 	// TODO - if id is not part of cl or part of rl, the program throws runtime error nil pointer exception -> make sure program simply stops with error message and does not go on!
 
 	// Call Setup to get public parameters
-	// pass rng as parameter, so we only need to initialise it once in main
 	pubKey, mk, alpha := setup(l) // TODO - only pubkey should be returned here?
 
 	// Call KeyGen to get private key SK (parameters)
