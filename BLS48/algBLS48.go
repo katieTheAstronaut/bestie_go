@@ -147,10 +147,10 @@ func setup(l int) (pubKey *pk, mk *BLS48581.ECP, alpha *BLS48581.BIG) {
 	// fmt.Println("Omegatest: ", omegatest.ToString(), "")
 	// fmt.Println(omega.Equals(omegatest))
 
-	// ----------- Print Stuff / Test
-	fmt.Println("\n\n")
-	fmt.Println("-------  SETUP  ---------")
-	// fmt.Println("The Modulus p is: (", p, ")")
+	// // ----------- Print Stuff / Test
+	// fmt.Println("\n\n")
+	// fmt.Println("-------  SETUP  ---------")
+	// // fmt.Println("The Modulus p is: (", p, ")")
 	// fmt.Printf("P:\t%s\n", p.ToString())
 	// fmt.Println(new(big.Int).SetString(p.ToString(), 16))
 	// fmt.Println("The Curve Order q(or r) is: (", q, ")")
@@ -164,19 +164,19 @@ func setup(l int) (pubKey *pk, mk *BLS48581.ECP, alpha *BLS48581.BIG) {
 	// fmt.Println("Master Key (secret): ", mk, " - is this a point in G1? - ", BLS48581.G1member(mk), " ")
 
 	//
-	// Printing Parameters
-	fmt.Printf("h_0 = %s\n", h0.ToString())
-	for i := 0; i < l; i++ {
-		fmt.Printf("h_%d,0 = %s\n", i+1, helements0[i].ToString())
-		fmt.Printf("h_%d,1 = %s\n", i+1, helements1[i].ToString())
-	}
-	fmt.Println("\n")
+	// // Printing Parameters
+	// fmt.Printf("h_0 = %s\n", h0.ToString())
+	// for i := 0; i < l; i++ {
+	// 	fmt.Printf("h_%d,0 = %s\n", i+1, helements0[i].ToString())
+	// 	fmt.Printf("h_%d,1 = %s\n", i+1, helements1[i].ToString())
+	// }
+	// fmt.Println("\n")
 
-	fmt.Printf("k_0 = %s\n", k0.ToString())
-	for i := 0; i < l; i++ {
-		fmt.Printf("k_%d,0 = %s\n", i+1, kelements0[i].ToString())
-		fmt.Printf("k_%d,1 = %s\n", i+1, kelements1[i].ToString())
-	}
+	// fmt.Printf("k_0 = %s\n", k0.ToString())
+	// for i := 0; i < l; i++ {
+	// 	fmt.Printf("k_%d,0 = %s\n", i+1, kelements0[i].ToString())
+	// 	fmt.Printf("k_%d,1 = %s\n", i+1, kelements1[i].ToString())
+	// }
 
 	pubKey = &pk{p, g1, g2, h0, k0, helements0, helements1, kelements0, kelements1, omega}
 
@@ -186,9 +186,9 @@ func setup(l int) (pubKey *pk, mk *BLS48581.ECP, alpha *BLS48581.BIG) {
 // KeyGen takes user's ID, master key, and public parameters
 func keyGen(id string, mk *BLS48581.ECP, pubKey *pk, alpha *BLS48581.BIG) (secKey *sk, r *BLS48581.BIG, g1AlphaMinOmega, g1AlphaOmega *BLS48581.ECP) {
 
-	fmt.Println("\n\n")
-	fmt.Println("-------  KeyGen  ---------")
-	fmt.Println("The ID is: ", id, "")
+	// fmt.Println("\n\n")
+	// fmt.Println("-------  KeyGen  ---------")
+	// fmt.Println("The ID is: ", id, "")
 
 	q := BLS48581.NewBIGints(BLS48581.CURVE_Order) // TODO - do not repeat yourself, consider putting this in main? but it needs to be secret
 	l := len(id)
@@ -212,12 +212,12 @@ func keyGen(id string, mk *BLS48581.ECP, pubKey *pk, alpha *BLS48581.BIG) (secKe
 	for i := 0; i < l; i++ {
 		if string(id[i]) == "0" {
 			hID.Add(pubKey.helements0[i])
-			fmt.Println(" h_", i+1, "IDi : ", pubKey.helements0[i].ToString(), " ")
+			// fmt.Println(" h_", i+1, "IDi : ", pubKey.helements0[i].ToString(), " ")
 		} else if string(id[i]) == "1" {
 			hID.Add(pubKey.helements1[i])
-			fmt.Println(" h_", i+1, "IDi : ", pubKey.helements1[i].ToString(), " ")
+			// fmt.Println(" h_", i+1, "IDi : ", pubKey.helements1[i].ToString(), " ")
 		} else {
-			fmt.Println("ID could not be read")
+			// fmt.Println("ID could not be read")
 		}
 
 	}
@@ -226,7 +226,7 @@ func keyGen(id string, mk *BLS48581.ECP, pubKey *pk, alpha *BLS48581.BIG) (secKe
 	hExp.Add(g1AlphaMinOmega)
 
 	x0 := hExp
-	fmt.Println("x0 is the point: ", x0.ToString(), "")
+	// fmt.Println("x0 is the point: ", x0.ToString(), "")
 
 	// Test if adding the points for ID 010 will give the same resulting point --> it will
 	// x0Test := helements[1]
@@ -245,19 +245,19 @@ func keyGen(id string, mk *BLS48581.ECP, pubKey *pk, alpha *BLS48581.BIG) (secKe
 	for i := 0; i < l; i++ {
 		if string(id[i]) == "0" {
 			xelements[i] = BLS48581.G1mul(pubKey.helements1[i], r)
-			fmt.Println(" x ", i+1, " : ", xelements[i].ToString(), " ")
+			// fmt.Println(" x ", i+1, " : ", xelements[i].ToString(), " ")
 		} else if string(id[i]) == "1" {
 			xelements[i] = BLS48581.G1mul(pubKey.helements0[i], r)
-			fmt.Println(" x ", i+1, " : ", xelements[i].ToString(), " ")
+			// fmt.Println(" x ", i+1, " : ", xelements[i].ToString(), " ")
 		} else {
-			fmt.Println("ID could not be read")
+			// fmt.Println("ID could not be read")
 		}
 	}
 
 	// -- y0
 
 	y0 := BLS48581.G1mul(pubKey.k0, r)
-	fmt.Println("y0 is the point: ", y0.ToString(), "")
+	// fmt.Println("y0 is the point: ", y0.ToString(), "")
 
 	// -- y1...y2l
 	// two slices of odd and even, to make is more readable
@@ -273,16 +273,16 @@ func keyGen(id string, mk *BLS48581.ECP, pubKey *pk, alpha *BLS48581.BIG) (secKe
 			yOdd[i] = temp
 			temp2 := BLS48581.G1mul(pubKey.kelements0[i], r)
 			yEven[i] = temp2
-			fmt.Println(" y_", (i+1)*2-1, " : ", yOdd[i].ToString(), " ")
-			fmt.Println(" y_", (i+1)*2, " : ", yEven[i].ToString(), " ")
+			// fmt.Println(" y_", (i+1)*2-1, " : ", yOdd[i].ToString(), " ")
+			// fmt.Println(" y_", (i+1)*2, " : ", yEven[i].ToString(), " ")
 		} else if string(id[i]) == "1" {
 			temp := BLS48581.G1mul(pubKey.kelements0[i], r)
 			temp.Add(g1AlphaOmega)
 			yOdd[i] = temp
 			temp2 := BLS48581.G1mul(pubKey.kelements1[i], r)
 			yEven[i] = temp2
-			fmt.Println(" y_", (i+1)*2-1, " : ", yOdd[i].ToString(), " ")
-			fmt.Println(" y_", (i+1)*2, " : ", yEven[i].ToString(), " ")
+			// fmt.Println(" y_", (i+1)*2-1, " : ", yOdd[i].ToString(), " ")
+			// fmt.Println(" y_", (i+1)*2, " : ", yEven[i].ToString(), " ")
 		} else {
 			fmt.Println("issue")
 		}
@@ -300,8 +300,8 @@ func keyGen(id string, mk *BLS48581.ECP, pubKey *pk, alpha *BLS48581.BIG) (secKe
 // Encrypt takes subset (covered list CL and revoked list RL), public key parameters, and message m
 func encrypt(cl, rl string, pubKey *pk, message *BLS48581.FP48, r *BLS48581.BIG, g1AlphaMinOmega *BLS48581.ECP) (cipher *hdr, krl *BLS48581.ECP) {
 
-	fmt.Println("\n\n")
-	fmt.Println("-------  Encrypt  ---------")
+	// fmt.Println("\n\n")
+	// fmt.Println("-------  Encrypt  ---------")
 
 	q := BLS48581.NewBIGints(BLS48581.CURVE_Order) // TODO - do not repeat yourself, consider putting this in main? but it needs to be secret
 	l := len(cl)
@@ -325,20 +325,20 @@ func encrypt(cl, rl string, pubKey *pk, message *BLS48581.FP48, r *BLS48581.BIG,
 	hcl := BLS48581.NewECP()
 	hcl.Copy(pubKey.h0) // deep copy of ECP via ECP.Copy() method
 
-	fmt.Println("CL : ", cl)
+	// fmt.Println("CL : ", cl)
 	for i := 0; i < l; i++ {
 		if string(cl[i]) == "0" {
 			hcl.Add(pubKey.helements0[i])
-			fmt.Println("h_", i+1, "CLi : ", pubKey.helements0[i].ToString(), " ")
+			// fmt.Println("h_", i+1, "CLi : ", pubKey.helements0[i].ToString(), " ")
 		} else if string(cl[i]) == "1" {
 			hcl.Add(pubKey.helements1[i])
-			fmt.Println("h_", i+1, "CLi : ", pubKey.helements1[i].ToString(), " ")
+			// fmt.Println("h_", i+1, "CLi : ", pubKey.helements1[i].ToString(), " ")
 		} else if string(cl[i]) == "*" {
 			hProd := BLS48581.NewECP()
 			hProd.Copy(pubKey.helements0[i]) // deep copy of ECP via ECP.Copy() method
 			hProd.Add(pubKey.helements1[i])
 			hcl.Add(hProd)
-			fmt.Println("h_", i+1, "CLi : ", pubKey.helements0[i].ToString(), "* ", pubKey.helements1[i].ToString())
+			// fmt.Println("h_", i+1, "CLi : ", pubKey.helements0[i].ToString(), "* ", pubKey.helements1[i].ToString())
 		} else {
 			fmt.Println("CL could not be read")
 		}
@@ -350,16 +350,16 @@ func encrypt(cl, rl string, pubKey *pk, message *BLS48581.FP48, r *BLS48581.BIG,
 	krl = BLS48581.NewECP()
 	krl.Copy(pubKey.k0)
 
-	fmt.Println("RL : ", rl)
+	// fmt.Println("RL : ", rl)
 	for i := 0; i < l; i++ {
 		if string(rl[i]) == "0" {
 			krl.Add(pubKey.kelements0[i])
-			fmt.Println("k_", i+1, "_0 : ", pubKey.kelements0[i].ToString(), " ")
+			// fmt.Println("k_", i+1, "_0 : ", pubKey.kelements0[i].ToString(), " ")
 		} else if string(rl[i]) == "1" {
 			krl.Add(pubKey.kelements1[i])
-			fmt.Println("k_", i+1, "_1 : ", pubKey.kelements1[i].ToString(), " ")
+			// fmt.Println("k_", i+1, "_1 : ", pubKey.kelements1[i].ToString(), " ")
 		} else if string(rl[i]) == "*" {
-			fmt.Println("* - Do nothing")
+			// fmt.Println("* - Do nothing")
 		} else {
 			fmt.Println("RL could not be read")
 		}
@@ -376,7 +376,7 @@ func encrypt(cl, rl string, pubKey *pk, message *BLS48581.FP48, r *BLS48581.BIG,
 	// -- Test
 	hclr := BLS48581.G1mul(hcl, r)
 	hclr.Add(g1AlphaMinOmega)
-	fmt.Println("x' should be the same as g1^.. *hclr:", hclr.ToString())
+	// fmt.Println("x' should be the same as g1^.. *hclr:", hclr.ToString())
 
 	cipher = &hdr{c0, c1, c2, c3}
 
@@ -387,8 +387,8 @@ func encrypt(cl, rl string, pubKey *pk, message *BLS48581.FP48, r *BLS48581.BIG,
 // Decrypt takes subset, user's ID, private key SK_ID, and ciphertext HdrS and returns message M
 func decrypt(cl, rl, id string, secKey *sk, cipher *hdr, krl *BLS48581.ECP, r *BLS48581.BIG, g1AlphaOmega *BLS48581.ECP) (mes *BLS48581.FP48) {
 
-	fmt.Println("\n\n")
-	fmt.Println("-------  Decrypt  ---------")
+	// fmt.Println("\n\n")
+	// fmt.Println("-------  Decrypt  ---------")
 
 	q := BLS48581.NewBIGints(BLS48581.CURVE_Order) // TODO - do not repeat yourself, consider putting this in main? but it needs to be secret
 	l := len(id)
@@ -418,9 +418,9 @@ func decrypt(cl, rl, id string, secKey *sk, cipher *hdr, krl *BLS48581.ECP, r *B
 
 	// step 4: if d > 0, decrypt message
 
-	fmt.Println("P: ", pRl)
-	fmt.Println("Q: ", qRl)
-	fmt.Println("d: ", d)
+	// fmt.Println("P: ", pRl)
+	// fmt.Println("Q: ", qRl)
+	// fmt.Println("d: ", d)
 
 	if d > 0 {
 		// TODO - if we use structs, parse struct Hdr to single fields
@@ -433,10 +433,10 @@ func decrypt(cl, rl, id string, secKey *sk, cipher *hdr, krl *BLS48581.ECP, r *B
 		for i := 0; i < l; i++ {
 			if string(cl[i]) == "*" {
 				xAp.Add(secKey.xelements[i])
-				fmt.Println("CL at pos ", i, "is ", string(cl[i]), "so x_i is: ", secKey.xelements[i].ToString())
+				// fmt.Println("CL at pos ", i, "is ", string(cl[i]), "so x_i is: ", secKey.xelements[i].ToString())
 			}
 		}
-		fmt.Println("x':", xAp.ToString())
+		// fmt.Println("x':", xAp.ToString())
 
 		// compute y'
 		yAp := BLS48581.NewECP()
@@ -445,8 +445,8 @@ func decrypt(cl, rl, id string, secKey *sk, cipher *hdr, krl *BLS48581.ECP, r *B
 		for i := 1; i < l+1; i++ {
 			if contains(pRl, i) {
 				yAp.Add(secKey.yOdd[i-1])
-				fmt.Println("p-added to yap")
-				fmt.Println("P contains", i, " so y_", (2*i)-1, "is: ", secKey.yOdd[i-1].ToString())
+				// fmt.Println("p-added to yap")
+				// fmt.Println("P contains", i, " so y_", (2*i)-1, "is: ", secKey.yOdd[i-1].ToString())
 			} else {
 				// fmt.Println("p-not added to yap")
 			}
@@ -457,8 +457,8 @@ func decrypt(cl, rl, id string, secKey *sk, cipher *hdr, krl *BLS48581.ECP, r *B
 		for i := 1; i < l+1; i++ {
 			if contains(qRl, i) {
 				yAp.Add(secKey.yEven[i-1])
-				fmt.Println("q-added to yap")
-				fmt.Println("Q contains", i, "so y_", (2 * i), "is: ", secKey.yEven[i-1].ToString())
+				// fmt.Println("q-added to yap")
+				// fmt.Println("Q contains", i, "so y_", (2 * i), "is: ", secKey.yEven[i-1].ToString())
 
 			} else {
 				// fmt.Println("q-not added to yap")
@@ -475,7 +475,7 @@ func decrypt(cl, rl, id string, secKey *sk, cipher *hdr, krl *BLS48581.ECP, r *B
 
 		yAp = BLS48581.G1mul(yAp, dExp)
 
-		fmt.Println("y' = ", yAp.ToString())
+		// fmt.Println("y' = ", yAp.ToString())
 
 		// decrypt message: m = c0 * e(x'*y', C1)^-1 * e(C2*C3^(d-1), z)
 		xAp2 := BLS48581.NewECP()
@@ -498,7 +498,7 @@ func decrypt(cl, rl, id string, secKey *sk, cipher *hdr, krl *BLS48581.ECP, r *B
 		mes.Mul(e1)
 		mes.Mul(e2)
 
-		fmt.Println("Message:", mes.ToString())
+		// fmt.Println("Message:", mes.ToString())
 
 	} else {
 		fmt.Println("error: d = ", d, "the ID is part of the revoked set!")
@@ -516,11 +516,11 @@ func decrypt(cl, rl, id string, secKey *sk, cipher *hdr, krl *BLS48581.ECP, r *B
 	// fmt.Println("d^-1 = ", dExp.ToString())
 
 	krlr := BLS48581.G1mul(krl, r)
-	fmt.Println("k(rl)^r should be the same as y0 with both points added?: ", krlr.ToString())
+	// fmt.Println("k(rl)^r should be the same as y0 with both points added?: ", krlr.ToString())
 	krlrd := BLS48581.G1mul(krlr, dExp)
 	krlrd.Add(g1AlphaOmega)
 
-	fmt.Println("y' should be the same as: ", krlrd.ToString())
+	// fmt.Println("y' should be the same as: ", krlrd.ToString())
 
 	return mes
 
