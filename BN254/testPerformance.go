@@ -63,7 +63,7 @@ func testEncryption(message *BN254.FP12, s *subset, pubKey *pk, l int) (cipher *
 func testDecryption(s *subset, id string, secKey *sk, cipher *hdr, l int) (mes *BN254.FP12) {
 	init := time.Now()
 
-	mes = decrypt(s, id, secKey, cipher)
+	mes, _ = decrypt(s, id, secKey, cipher)
 
 	elapsed := time.Since(init)
 

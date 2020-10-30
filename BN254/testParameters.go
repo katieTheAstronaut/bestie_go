@@ -2,62 +2,56 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/miracl/core/go/core/BN254"
 )
 
-func main() {
+// func main() {
 
-	// measure time of algorithms
-	init := time.Now()
+// 	// Initialise Random number generator
+// 	initRNG()
 
-	// Initialise Random number generator
-	initRNG()
+// 	// Specify ID, CL and RL
+// 	id := "01101010"                             // User's ID
+// 	s := &subset{cl: "*1****10", rl: "*****110"} // subset consisting of CL and RL
+// 	l := len(id)                                 // ID bit length
 
-	// Specify ID, CL and RL
-	id := "0110"                         // User's ID
-	s := &subset{cl: "***0", rl: "*100"} // subset consisting of CL and RL
-	l := len(id)                         // ID bit length
+// 	// Print ID,CL,RL
+// 	printID(id, s)
 
-	// TODO - if id is not part of cl or part of rl, the program throws runtime error nil pointer exception -> make sure program simply stops with error message and does not go on!
+// 	// Print all Setup-related Parameters
+// 	pubKey, mk := setup(l)
+// 	printSetup(pubKey, mk, l)
 
-	// Print ID,CL,RL
+// 	// Print all KeyGen-related Parameters
+// 	secKey := keyGen(id, mk, pubKey)
+// 	printKeyGen(secKey, l)
 
-	// Print all Setup-related Parameters
-	pubKey, mk := setup(l)
-	printSetup(pubKey, mk, l)
+// 	// Create random message M in GT
+// 	inputMessage := createRandomM(pubKey)
 
-	// Print all KeyGen-related Parameters
-	secKey := keyGen(id, mk, pubKey)
-	printKeyGen(secKey, l)
+// 	// // Print message
+// 	// fmt.Println("original message: ", message.ToString())
 
-	// Create random message M in GT
-	message := createRandomM(pubKey)
+// 	// Call Encrypt
+// 	cipher := encrypt(s, pubKey, inputMessage)
+// 	// printEncrypt(cipher)
 
-	// // Print message
-	// fmt.Println("original message: ", message.ToString())
+// 	outputMessage, err := decrypt(s, id, secKey, cipher)
+// 	printDecrypt(inputMessage, outputMessage, err)
 
-	// Call Encrypt
-	cipher := encrypt(s, pubKey, message)
-	printEncrypt(cipher)
+// 	// Check Validity of all Parameters
+// 	// testValidity(pubKey, mk, inputMessage)
 
-	mes := decrypt(s, id, secKey, cipher)
+// }
 
-	functional := message.Equals(mes) // test if encrypted message is same as decrypted message
+func printID(id string, s *subset) {
+
 	fmt.Println("\n")
-	fmt.Println("Message is same: ", functional)
-
-	// fmt.Println(x0, y0, xelements, yEven, yOdd, z, c0, c1, c2, c3)
-
-	// end of stopwatch
-	fmt.Println("\n")
-	elapsed := time.Since(init)
-	fmt.Printf("Binomial took %s", elapsed)
-
-	// Check Validity of all Parameters
-	testValidity(pubKey, mk, message)
-
+	fmt.Println("-------  BESTIE  ---------")
+	fmt.Println("Your Device ID is: ", id)
+	fmt.Println("The covered IDs for this broadcast are: ", s.cl)
+	fmt.Println("The revoked IDs for this broadcast are: ", s.rl)
 }
 
 // Function to print all setup related parameters
@@ -119,9 +113,24 @@ func printEncrypt(cipher *hdr) {
 }
 
 // Function to print all decrypt related parameters
-func printDecrypt() {
+func printDecrypt(inputMessage *BN254.FP12, outputMessage *BN254.FP12, err error) {
+
 	fmt.Println("\n\n")
 	fmt.Println("-------  Decrypt  ---------")
+
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		equalMes := inputMessage.Equals(outputMessage) // test if encrypted message is same as decrypted message
+		if equalMes {
+			fmt.Println("Congratulations, the message was successfully decrypted")
+			fmt.Println("\n")
+			fmt.Println("The message is: ", outputMessage.ToString())
+		} else {
+			fmt.Println("ERROR: The decrypted message is not correct, your ID is not part of the covered group")
+		}
+	}
+
 }
 
 // Function to test if all points are really valid
@@ -136,6 +145,6 @@ func testValidity(pubkey *pk, mk *BN254.ECP, message *BN254.FP12) {
 	fmt.Println("Is MK a point in G1? - ", BN254.G1member(mk))
 
 	val := BN254.GTmember(message)
-	fmt.Println("Is message is GT member? ", val)
+	fmt.Println("Is message a GT member? ", val)
 
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"time"
@@ -279,7 +280,7 @@ func encrypt(s *subset, pubKey *pk, message *BN254.FP12) (cipher *hdr) {
 }
 
 // Decrypt takes subset, user's ID, private key SK_ID, and ciphertext HdrS and returns message M
-func decrypt(s *subset, id string, secKey *sk, cipher *hdr) (mes *BN254.FP12) {
+func decrypt(s *subset, id string, secKey *sk, cipher *hdr) (mes *BN254.FP12, err error) {
 
 	q := BN254.NewBIGints(BN254.CURVE_Order) // TODO - do not repeat yourself, consider putting this in main? but it needs to be secret
 	l := len(id)
@@ -365,10 +366,10 @@ func decrypt(s *subset, id string, secKey *sk, cipher *hdr) (mes *BN254.FP12) {
 		mes.Mul(e2)
 
 	} else {
-		fmt.Println("error: d = ", d, "the ID is part of the revoked set!")
+		err = errors.New("ERROR: d = 0, your ID is part of the revoked set!")
 	}
 
-	return mes
+	return mes, err
 }
 
 //-----Helper Functions
