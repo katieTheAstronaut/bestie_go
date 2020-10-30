@@ -18,52 +18,52 @@ type skJSON struct {
 	Z         string
 }
 
-func main() {
+// func main() {
 
-	initRNG()
+// 	initRNG()
 
-	l := 128
+// 	l := 128
 
-	// get test ID, CL and RL
-	id, cl, rl := getID(l)
+// 	// get test ID, CL and RL
+// 	id, s := getID(l)
 
-	// Run Setup and KeyGen
-	pubKey, mk, alpha := setup(l)
-	secKey, r, g1AlphaMinOmega, g1AlphaOmega := keyGen(id, mk, pubKey, alpha)
+// 	// Run Setup and KeyGen
+// 	pubKey, mk := setup(l)
+// 	secKey := keyGen(id, mk, pubKey)
 
-	// Test Encryption Performance
-	message := createRandomM(pubKey)
-	cipher, krl := testEncryption(message, cl, rl, pubKey, r, g1AlphaMinOmega, l)
+// 	// Test Encryption Performance
+// 	message := createRandomM(pubKey)
+// 	cipher := testEncryption(message, s, pubKey, l)
 
-	// Test Decryption Performance
-	mes := testDecryption(cl, rl, id, secKey, cipher, krl, r, g1AlphaOmega, l)
+// 	// Test Decryption Performance
+// 	mes := testDecryption(s, id, secKey, cipher, l)
 
-	// Test if message input equals message output
-	checkMessage(message, mes)
+// 	// Test if message input equals message output
+// 	checkMessage(message, mes)
 
-	// Write SK to file
-	skToFile(secKey)
-}
+// 	// Write SK to file
+// 	skToFile(secKey)
+// }
 
 // function to test Encryption performance
-func testEncryption(message *BN254.FP12, cl, rl string, pubKey *pk, r *BN254.BIG, g1AlphaMinOmega *BN254.ECP, l int) (cipher *hdr, krl *BN254.ECP) {
+func testEncryption(message *BN254.FP12, s *subset, pubKey *pk, l int) (cipher *hdr) {
 
 	init := time.Now()
 
-	cipher, krl = encrypt(cl, rl, pubKey, message, r, g1AlphaMinOmega)
+	cipher = encrypt(s, pubKey, message)
 
 	elapsed := time.Since(init)
 
 	fmt.Println("Encryption for l = ", l, " took %s", elapsed)
 
-	return cipher, krl
+	return cipher
 }
 
 // function to test Decryption performance
-func testDecryption(cl, rl, id string, secKey *sk, cipher *hdr, krl *BN254.ECP, r *BN254.BIG, g1AlphaOmega *BN254.ECP, l int) (mes *BN254.FP12) {
+func testDecryption(s *subset, id string, secKey *sk, cipher *hdr, l int) (mes *BN254.FP12) {
 	init := time.Now()
 
-	mes = decrypt(cl, rl, id, secKey, cipher, krl, r, g1AlphaOmega)
+	mes = decrypt(s, id, secKey, cipher)
 
 	elapsed := time.Since(init)
 
@@ -119,7 +119,9 @@ func createRandomM(pubKey *pk) *BN254.FP12 {
 }
 
 // function to generate test ID, CL and RL for specific length
-func getID(l int) (id, cl, rl string) {
+func getID(l int) (id string, s *subset) {
+
+	var cl, rl string
 
 	switch l {
 	case 128:
@@ -144,5 +146,7 @@ func getID(l int) (id, cl, rl string) {
 		rl = "******00"
 	}
 
-	return id, cl, rl
+	s = &subset{cl, rl}
+
+	return id, s
 }
