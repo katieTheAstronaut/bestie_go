@@ -32,31 +32,27 @@ func main() {
 	// Print all Setup-related Parameters
 	pubKey, mk := setup(l)
 	fmt.Println("\n")
-	fmt.Println("--Setup done--")
+	fmt.Println("...Setup done \u2713")
 
 	// Print all KeyGen-related Parameters
 	secKey := keyGen(id, mk, pubKey)
-	fmt.Println("\n")
-	fmt.Println("--Secret Key for device ID generated--")
+	fmt.Println("...Secret Key for device ID generated \u2713")
 
 	// Create random message M in GT
 	inputMessage := createRandomM(pubKey)
-	fmt.Println("\n")
-	fmt.Println("--Random Message generated--")
-	fmt.Println("Input Message:\n ", inputMessage.ToString())
+	fmt.Println("...Random Message generated \u2713")
+	fmt.Println("Input Message: ", inputMessage.ToString())
 
 	// Call Encrypt
 	cipher := encrypt(s, pubKey, inputMessage)
 	fmt.Println("\n")
-	fmt.Println("--Message Encrypted--")
+	fmt.Println("...Message Encrypted \u2713")
 
 	outputMessage, err := decrypt(s, id, secKey, cipher)
 	if err != nil {
-		fmt.Println("\n")
 		fmt.Println("Error: ", err)
 	} else {
-		fmt.Println("\n")
-		fmt.Println("--Message successfully Decrypted on Device--")
+		fmt.Println("...Message successfully Decrypted on Device\u2713")
 		fmt.Println("Output Message:\n ", outputMessage.ToString())
 	}
 }
