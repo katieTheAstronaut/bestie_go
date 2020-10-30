@@ -14,13 +14,13 @@ func main() {
 	fmt.Println("#####Welcome to BESTIE System Control######")
 
 	fmt.Println("Please enter the list of covered IDs, e.g. **1***10*")
-	fmt.Scanf("%s", &cl)
+	fmt.Scanln(&cl)
 
 	fmt.Println("Please enter the list of revoked IDs, e.g. *****110*")
-	fmt.Scanf("%s", &rl)
+	fmt.Scanln(&rl)
 
 	fmt.Println("Please enter a device ID")
-	fmt.Scanf("%s", &id)
+	fmt.Scanln(&id)
 
 	s := &subset{cl: cl, rl: rl} // subset consisting of CL and RL
 
