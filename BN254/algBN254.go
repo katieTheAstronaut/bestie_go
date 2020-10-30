@@ -40,7 +40,7 @@ type hdr struct {
 	c3 *BN254.ECP
 }
 
-// ----------- Package Scope (global) Variables
+// ----------- Package Scope Variables
 var rng *core.RAND
 
 // Function to Initialise the Random Number Generator (call only once at beginning of program!!!)
