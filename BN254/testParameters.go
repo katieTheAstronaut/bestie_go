@@ -35,13 +35,13 @@ import (
 
 // 	// Call Encrypt
 // 	cipher := encrypt(s, pubKey, inputMessage)
-// 	// printEncrypt(cipher)
+// 	printEncrypt(cipher)
 
 // 	outputMessage, err := decrypt(s, id, secKey, cipher)
 // 	printDecrypt(inputMessage, outputMessage, err)
 
 // 	// Check Validity of all Parameters
-// 	// testValidity(pubKey, mk, inputMessage)
+// 	testValidity(pubKey, mk, inputMessage)
 
 // }
 
@@ -86,7 +86,7 @@ func printKeyGen(secKey *sk, l int) {
 	fmt.Println("\n\n")
 	fmt.Println("-------  KeyGen  ---------")
 
-	fmt.Println("x0: ", secKey.x0.ToString(), "")
+	fmt.Println("x 0: ", secKey.x0.ToString(), "")
 	for i := 0; i < l; i++ {
 		fmt.Println("x", i+1, ":", secKey.xelements[i].ToString())
 	}
@@ -139,11 +139,11 @@ func testValidity(pubkey *pk, mk *BN254.ECP, message *BN254.FP12) {
 
 	fmt.Println("\n\n")
 	fmt.Println("-------  Validity Test  ---------")
-
+	fmt.Println("Is h0 really in G1? ", BN254.G1member(pubkey.h0))
 	fmt.Println("Is g1 really in G1? ", BN254.G1member(pubkey.g1))
 	fmt.Println("Is g2 really in G2? ", BN254.G2member(pubkey.g2))
-	fmt.Println("Is MK a point in G1? - ", BN254.G1member(mk))
-
+	fmt.Println("Is h0 really in G1? ", BN254.G1member(pubkey.h0))
+	fmt.Println("Is MK a point in G1? ", BN254.G1member(mk))
 	val := BN254.GTmember(message)
 	fmt.Println("Is message a GT member? ", val)
 

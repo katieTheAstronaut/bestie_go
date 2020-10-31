@@ -137,15 +137,17 @@ func keyGen(id string, mk *BN254.ECP, pubKey *pk) (secKey *sk) {
 
 	// ---x0
 	//// g1^(alpha-alphaOmega) = mk / mk2
+	// mk2 =  g1^alphaOmega
+	mk1 := BN254.NewECP()
+	mk1.Copy(mk)
 
-	mk2 := BN254.G1mul(pubKey.g1, alphaOmega) // mk2 =  g1^alphaOmega
-	g1AlphaMinOmega := BN254.NewECP()
-	g1AlphaMinOmega.Copy(mk)
+	mk2 := BN254.G1mul(pubKey.g1, alphaOmega)
 
 	g1AlphaOmega := BN254.NewECP()
 	g1AlphaOmega.Copy(mk2)
-	g1AlphaOmega.Neg()                // compute mk2^-1
-	g1AlphaMinOmega.Add(g1AlphaOmega) // mk * mk2^-1
+
+	mk2.Neg()    // compute mk2^-1
+	mk1.Add(mk2) // mk * mk2^-1
 
 	hID := BN254.NewECP()
 	hID.Copy(pubKey.h0) // deep copy of ECP via ECP.Copy() method
@@ -161,7 +163,7 @@ func keyGen(id string, mk *BN254.ECP, pubKey *pk) (secKey *sk) {
 	}
 
 	hExp := BN254.G1mul(hID, r)
-	hExp.Add(g1AlphaMinOmega)
+	hExp.Add(mk1)
 
 	x0 := hExp
 
@@ -191,16 +193,14 @@ func keyGen(id string, mk *BN254.ECP, pubKey *pk) (secKey *sk) {
 	for i := 0; i < l; i++ {
 		if string(id[i]) == "0" {
 			temp := BN254.G1mul(pubKey.kelements1[i], r)
-			temp.Add(mk2)
+			temp.Add(g1AlphaOmega)
 			yOdd[i] = temp
-			temp2 := BN254.G1mul(pubKey.kelements0[i], r)
-			yEven[i] = temp2
+			yEven[i] = BN254.G1mul(pubKey.kelements0[i], r)
 		} else if string(id[i]) == "1" {
 			temp := BN254.G1mul(pubKey.kelements0[i], r)
-			temp.Add(mk2)
+			temp.Add(g1AlphaOmega)
 			yOdd[i] = temp
-			temp2 := BN254.G1mul(pubKey.kelements1[i], r)
-			yEven[i] = temp2
+			yEven[i] = BN254.G1mul(pubKey.kelements1[i], r)
 		} else {
 			fmt.Println("ID could not be read")
 		}

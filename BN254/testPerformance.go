@@ -18,32 +18,36 @@ type skJSON struct {
 	Z         string
 }
 
-// func main() {
+func main() {
 
-// 	initRNG()
+	initRNG()
 
-// 	l := 128
+	l := 128
 
-// 	// get test ID, CL and RL
-// 	id, s := getID(l)
+	// get test ID, CL and RL
+	id, s := getID(l)
 
-// 	// Run Setup and KeyGen
-// 	pubKey, mk := setup(l)
-// 	secKey := keyGen(id, mk, pubKey)
+	fmt.Println("\n")
+	fmt.Println("-------  Performance Test  ---------")
+	fmt.Println("Curve: BN254")
 
-// 	// Test Encryption Performance
-// 	message := createRandomM(pubKey)
-// 	cipher := testEncryption(message, s, pubKey, l)
+	// Run Setup and KeyGen
+	pubKey, mk := setup(l)
+	secKey := keyGen(id, mk, pubKey)
 
-// 	// Test Decryption Performance
-// 	mes := testDecryption(s, id, secKey, cipher, l)
+	// Test Encryption Performance
+	message := createRandomM(pubKey)
+	cipher := testEncryption(message, s, pubKey, l)
 
-// 	// Test if message input equals message output
-// 	checkMessage(message, mes)
+	// Test Decryption Performance
+	mes := testDecryption(s, id, secKey, cipher, l)
 
-// 	// Write SK to file
-// 	skToFile(secKey)
-// }
+	// Test if message input equals message output
+	checkMessage(message, mes)
+
+	// Write SK to file
+	skToFile(secKey)
+}
 
 // function to test Encryption performance
 func testEncryption(message *BN254.FP12, s *subset, pubKey *pk, l int) (cipher *hdr) {
@@ -54,7 +58,7 @@ func testEncryption(message *BN254.FP12, s *subset, pubKey *pk, l int) (cipher *
 
 	elapsed := time.Since(init)
 
-	fmt.Println("Encryption for l = ", l, " took %s", elapsed)
+	fmt.Println("Encryption for l = ", l, " took", elapsed)
 
 	return cipher
 }
@@ -67,7 +71,7 @@ func testDecryption(s *subset, id string, secKey *sk, cipher *hdr, l int) (mes *
 
 	elapsed := time.Since(init)
 
-	fmt.Println("Decryption for l = ", l, " took %s", elapsed)
+	fmt.Println("Decryption for l = ", l, " took", elapsed)
 
 	return mes
 }
