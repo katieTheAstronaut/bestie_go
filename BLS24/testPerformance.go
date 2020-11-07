@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/miracl/core/go/core/BN254"
+	"github.com/miracl/core/go/core/BLS24479"
 )
 
 type skJSON struct {
@@ -29,7 +29,7 @@ type skJSON struct {
 
 // 	fmt.Println("\n")
 // 	fmt.Println("-------  Performance Test  ---------")
-// 	fmt.Println("Curve: BN254")
+// 	fmt.Println("Curve: BLS24479")
 
 // 	// Run Setup and KeyGen
 // 	pubKey, mk := setup(l)
@@ -50,7 +50,7 @@ type skJSON struct {
 // }
 
 // function to test Encryption performance
-func testEncryption(message *BN254.FP12, s *subset, pubKey *pk, l int) (cipher *hdr) {
+func testEncryption(message *BLS24479.FP24, s *subset, pubKey *pk, l int) (cipher *hdr) {
 
 	init := time.Now()
 
@@ -64,7 +64,7 @@ func testEncryption(message *BN254.FP12, s *subset, pubKey *pk, l int) (cipher *
 }
 
 // function to test Decryption performance
-func testDecryption(s *subset, id string, secKey *sk, cipher *hdr, l int) (mes *BN254.FP12) {
+func testDecryption(s *subset, id string, secKey *sk, cipher *hdr, l int) (mes *BLS24479.FP24) {
 	init := time.Now()
 
 	mes, _ = decrypt(s, id, secKey, cipher)
@@ -77,7 +77,7 @@ func testDecryption(s *subset, id string, secKey *sk, cipher *hdr, l int) (mes *
 }
 
 // function to test message validity
-func checkMessage(inputMes, outputMes *BN254.FP12) {
+func checkMessage(inputMes, outputMes *BLS24479.FP24) {
 	equality := inputMes.Equals(outputMes)
 	fmt.Println("Input Message is same as Output Message: ", equality)
 }
@@ -99,7 +99,7 @@ func skToFile(secKey *sk) {
 
 // function to turn ECP slice to String slice
 // helper function for skToFile()
-func toStrArr(a []*BN254.ECP) []string {
+func toStrArr(a []*BLS24479.ECP) []string {
 	result := make([]string, len(a))
 
 	for i := 0; i < len(a); i++ {
@@ -109,15 +109,15 @@ func toStrArr(a []*BN254.ECP) []string {
 }
 
 // Function to create random message
-func createRandomM(pubKey *pk) *BN254.FP12 {
+func createRandomM(pubKey *pk) *BLS24479.FP24 {
 	// Create message M in GT
-	q := BN254.NewBIGints(BN254.CURVE_Order)
-	rand1 := BN254.Randomnum(q, rng)
-	m1 := BN254.G1mul(pubKey.g1, rand1)
-	rand2 := BN254.Randomnum(q, rng)
-	m2 := BN254.G2mul(pubKey.g2, rand2)
-	message := BN254.Ate(m2, m1)
-	message = BN254.Fexp(message)
+	q := BLS24479.NewBIGints(BLS24479.CURVE_Order)
+	rand1 := BLS24479.Randomnum(q, rng)
+	m1 := BLS24479.G1mul(pubKey.g1, rand1)
+	rand2 := BLS24479.Randomnum(q, rng)
+	m2 := BLS24479.G2mul(pubKey.g2, rand2)
+	message := BLS24479.Ate(m2, m1)
+	message = BLS24479.Fexp(message)
 
 	return message
 }
