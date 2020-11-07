@@ -1,9 +1,9 @@
 
 ///// Curves
-Since the MIRACL Core library does not support curves as objects, there is a different implementation for each curve. The following curves were used: BN254, BN462, BLS24-479, and BLS48-581.
+Since the MIRACL Core library does not support curves as objects, each curve has its own implementation. The following curves were used: BN254, BN462, BLS24-479, and BLS48-581.
 
 ///// Folder Structure
-There are four folders, each containing similar files for a different curve (see folder name)
+There are four folders, each containing similar files for a specific curve (see folder name)
 
 |
 |- BN254
