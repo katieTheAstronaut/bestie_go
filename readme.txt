@@ -1,6 +1,9 @@
 
-/////Folder Structure
-There are four folders, each containing the same files for a different curve (see folder name)
+///// Curves
+Since the MIRACL Core library does not support curves as objects, there is a different implementation for each curve. The following curves were used: BN254, BN462, BLS24-479, and BLS48-581.
+
+///// Folder Structure
+There are four folders, each containing similar files for a different curve (see folder name)
 
 |
 |- BN254
@@ -22,7 +25,7 @@ There are four folders, each containing the same files for a different curve (se
 ///// Running Executables
 Each folder contains the original go files as well as compiled executable versions. 
 If on Mac, simply running or double-clicking on those files (.exec file ending) will open them in terminal.
-On Windows, please open Command Prompt, cd to directory of files and type 'cmd /k filename.exe', replacing filename with desired executable. This is to ensure the Command Window does not close right after the program is done. 
+On Windows, please open Command Prompt, cd to directory of files and type 'cmd /k filename.exe', replacing filename with desired executable. This is to ensure the Command Window does not close right after the program is done and the results stay visible.
 
 ///// Testing Go Files
 If you would like to change Parameters (such as ID, CL, RL etc.) in one of the go files, simply do so and run them from the console with the command 'go run *.go'. This ensures the file has all necessary functions available. You might need to comment/uncomment main functions where necessary, as there can only be one main function per package at all times. 

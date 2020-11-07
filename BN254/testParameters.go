@@ -30,12 +30,9 @@ import (
 // 	// Create random message M in GT
 // 	inputMessage := createRandomM(pubKey)
 
-// 	// // Print message
-// 	// fmt.Println("original message: ", message.ToString())
-
 // 	// Call Encrypt
 // 	cipher := encrypt(s, pubKey, inputMessage)
-// 	printEncrypt(cipher)
+// 	printEncrypt(cipher, inputMessage)
 
 // 	outputMessage, err := decrypt(s, id, secKey, cipher)
 // 	printDecrypt(inputMessage, outputMessage, err)
@@ -100,11 +97,13 @@ func printKeyGen(secKey *sk, l int) {
 }
 
 // Function to print all encrypt related parameters
-func printEncrypt(cipher *hdr) {
+func printEncrypt(cipher *hdr, inputMessage *BN254.FP12) {
 
 	fmt.Println("\n\n")
 	fmt.Println("-------  Encrypt  ---------")
 
+	fmt.Println("original message: ", inputMessage.ToString())
+	fmt.Println("\n")
 	fmt.Println("c0 : ", cipher.c0.ToString())
 	fmt.Println("c1 : ", cipher.c1.ToString())
 	fmt.Println("c2 : ", cipher.c2.ToString())
@@ -130,7 +129,6 @@ func printDecrypt(inputMessage *BN254.FP12, outputMessage *BN254.FP12, err error
 			fmt.Println("ERROR: The decrypted message is not correct, your ID is not part of the covered group")
 		}
 	}
-
 }
 
 // Function to test if all points are really valid
