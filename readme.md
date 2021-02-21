@@ -1,3 +1,5 @@
+# BESTIE Go Implementation
+
 
 ///// Curves
 Since the MIRACL Core library does not support curves as objects, each curve has its own implementation. The following curves were used: BN254, BN462, BLS24-479, and BLS48-581.
