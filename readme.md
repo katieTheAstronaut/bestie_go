@@ -1,26 +1,48 @@
 # BESTIE Go Implementation
+This is a prototypical implementation of the BESTIE broadcast encryption (https://eprint.iacr.org/2019/1311.pdf) scheme in Go.
+
+Separate folders contain the implementation for specific elliptic curves. In total there are four implementations to chose from. The following curves were used: BN254, BN462, BLS24-479, and BLS48-581.
+
+Read the thesis for more details.
+
+## Getting started
+For testing purposes, you can simply run the compiled test executables in each folder. 
+
+In order to get this project up and running for your own development purposes, make sure you install the prerequisites and then simply adapt the .go files to your needs and compile them. 
+
+### Prerequisites
+This implementation uses the MIRACL Core library. Follow the installation instructions given at https://github.com/miracl/core/tree/master/go.
 
 
-///// Curves
-Since the MIRACL Core library does not support curves as objects, each curve has its own implementation. The following curves were used: BN254, BN462, BLS24-479, and BLS48-581.
+### Folder Structure
+Each Folder contains similar files for the specific curve in the folder name.
 
-///// Folder Structure
-There are four folders, each containing similar files for a specific curve (see folder name)
 
-|
 |- BN254
+
 |   |- algBN254                 // Contains the BESTIE algorithms
+
 |   |- testInput.go             // Simple console app running BESTIE on user input (go file)
+
 |   |- testInput.exe            // Simple console app running BESTIE on user input (compiled for Windows)
+
 |   |- testInput.exec           // Simple console app running BESTIE on user input (compiled for Mac)
+
 |   |- testParameters.go        // Test run to show all parameters for fixed id (go file)
+
 |   |- testParameters.exe       // Test run to show all parameters for fixed id (compiled for Windows)
+
 |   |- testParameters.exec      // Test run to show all parameters for fixed id (compiled for Mac)
+
 |   |- testPerformance.go       // Test run to check performance for fixed id (go file)
+
 |   |- testPerformance.exe      // Test run to check performance for fixed id (compiled for Windows)
+
 |   |- testPerformance.exec     // Test run to check performance for fixed id (compiled for Mac)
+
 |
 |- BN462
+
 | ... 
 
 
